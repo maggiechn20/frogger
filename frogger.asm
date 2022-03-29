@@ -21,24 +21,37 @@ sw $t3, 128($t0) # paint the first unit on the second row blue. Why +128?
 
 # Set/draw the background 
 
+
 # draw the destination green land
 
-# initialize the Loop variables $t1 and $t2 
-add $t4, $t4, $zero	# set $t4 to zero 
-addi $t5, $t5, 256	# set $t5 to 256 
+# initialize the Loop variables $t4 and $t5 
+add $t4, $t4, $zero		# set $t4 to zero 
+addi $t5, $t5, 256		# set $t5 to 256 
 
 draw_destination:
-beq $t4, $t5, Exit	# Branch to Exit if $t4 == 512
-sw $t2, 0($t0)		# paint the first unit on the first row green. 
-addi $t0, $t0, 4	# move to the next pixel in the bitmap
+beq $t4, $t5, start_middle_draw	# Branch to Exit if $t4 == 512
+sw $t2, 0($t0)			# paint the first unit on the first row green. 
+addi $t0, $t0, 4		# move to the next pixel in the bitmap
 
-addi $t4, $t4, 1	# incrment $t4 by 1
+addi $t4, $t4, 1		# incrment $t4 by 1
 j draw_destination
 
 # draw the river
 
 
 # draw the middle green land
+start_middle_draw:
+addi $t4, $t4, 256		# set $t4 to 512. Since $t4 was last 256, 512 = 256 + 256 
+addi $t5, $t5, 384		# set $t5 to 640. ($t5 was last 256, and 640 = 258 + 384)
+addi $t0, $t0, 1024		# set $t0 to the new beginning pixel
+
+draw_middle:
+beq $t4, $t5, Exit		# Branch to Exit if $t4 == 640
+sw $t2, 0($t0)			# paint the first unit on the first row green. 
+addi $t0, $t0, 4		# move to the next pixel in the bitmap
+
+addi $t4, $t4, 1		# incrment $t4 by 1
+j draw_middle
 
 
 # draw the road
