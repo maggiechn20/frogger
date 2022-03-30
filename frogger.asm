@@ -1,4 +1,9 @@
-# Demo for painting
+#####################################################################
+#
+# CSC258H5S Winter 2022 Assembly Final Project
+# University of Toronto, St. George
+#
+# Student: Maggie Chen, 1006777800
 #
 # Bitmap Display Configuration:
 # - Unit width in pixels: 8
@@ -7,6 +12,23 @@
 # - Display height in pixels: 256
 # - Base Address for Display: 0x10008000 ($gp)
 #
+# Which milestone is reached in this submission? 1
+# (See the assignment handout for descriptions of the milestones)
+# - Milestone 1/2/3/4/5 (choose the one the applies)
+#
+# Which approved additional features have been implemented?
+# (See the assignment handout for the list of additional features)
+# 1. (fill in the feature, if any)
+# 2. (fill in the feature, if any)
+# 3. (fill in the feature, if any)
+# ... (add more if necessary)
+#
+# Any additional information that the TA needs to know:
+# - (write here, if any)
+#
+#####################################################################
+
+
 .data
 displayAddress: .word 0x10008000
 frog_x:		.word 16			# set frog position
@@ -23,7 +45,6 @@ river_2:     	.space 512			# 4*32*4 bytes allocated for the second river
 # Road and Vehicles -----------
 #
 
-
 # FIRST ROW OF ROAD
 
 # Allocate the colours into the .space variable
@@ -38,6 +59,15 @@ add $t4, $zero, $zero 	# $t4 holds i = 0
 add $t1, $zero, 128 	# $t1 holds 128
 addi $a0, $a0, 0 	# set the location of the first vehicle ($a0 < $a1)
 addi $a1, $a1, 16 	# set the location of the second vehicle
+addi $a2, $a2, 2560 	# set the location of the road/river
+
+jal colour_obstacle_line
+
+j done_first_row
+
+# FUNCTION colour_obstacle_line -> $a0, $a1, $a2 and $t9 are the 'parameters'
+
+colour_obstacle_line: 
 
 space_array_loop:
 bge $t4, $t1, finish_road  # exit loop when i >= 128 
@@ -81,7 +111,6 @@ j space_array_loop
 
 finish_road:
 
-
 # Paint the actual vehicle and road 
 
 lw $t0, displayAddress	# set $t0 as the base address for the display
@@ -94,7 +123,7 @@ li $t6, 0
 li $t7, 0
 addi $t6, $t6, 640 	# since the road starts at (0, 20) and 20 * 32 = 640
 addi $t7, $t7, 768	# set $t7 to 768
-addi $t0, $t0, 2560 	# set $t0 as the first painted pixel
+add $t0, $t0, $a2 	# set $t0 as the first painted pixel
 
 paint_loop:
 beq $t6, $t7, finish_paint_loop 	# Branch to Exit if $t6 /= 768
@@ -109,6 +138,69 @@ j paint_loop
 
 finish_paint_loop:
 
+jr $ra				# jump back to calling program
+
+done_first_row:
+
+
+# SECOND ROW OF ROAD
+
+# Allocate the colours into the .space variable
+
+lw $t0, displayAddress	# $t0 stores the base address for display
+li $t5, 0x808080 	# $t5 stores the grey colour used for the road
+li $t6, 0xffff00	# t6 stores the yellow colour for cars
+
+
+la $t9, vehicles_2	# $t9 holds address of array vehicles
+add $t4, $zero, $zero 	# $t4 holds i = 0
+add $t1, $zero, 128 	# $t1 holds 128
+li $a0, 4 		# set the location of the first vehicle ($a0 < $a1)
+li $a1, 20 		# set the location of the second vehicle
+li $a2, 3072		# set the location of the second road
+
+jal colour_obstacle_line
+
+
+
+#
+# Rivers and Logs -----------
+#
+
+# FIRST ROW OF RIVER
+
+# Allocate the colours into the .space variable
+
+lw $t0, displayAddress	# $t0 stores the base address for display
+li $t5, 0x00008b 	# $t5 stores the grey colour used for the river
+li $t6, 0x964b00	# t6 stores the brown colour for logs
+
+
+la $t9, river_1		# $t9 holds address of array river
+add $t4, $zero, $zero 	# $t4 holds i = 0
+add $t1, $zero, 128 	# $t1 holds 128
+li $a0, 0 		# set the location of the first log ($a0 < $a1)
+li $a1, 16 		# set the location of the second log
+li $a2, 1024 		# set the location of the first river row
+
+jal colour_obstacle_line
+
+# SECOND ROW OF RIVER
+
+# Allocate the colours into the .space variable
+
+lw $t0, displayAddress	# $t0 stores the base address for display
+li $t5, 0x00008b 	# $t5 stores the grey colour used for the river
+li $t6, 0x964b00	# t6 stores the brown colour for logs
+
+la $t9, river_2	# $t9 holds address of array vehicles
+add $t4, $zero, $zero 	# $t4 holds i = 0
+add $t1, $zero, 128 	# $t1 holds 128
+li $a0, 4 		# set the location of the first vehicle ($a0 < $a1)
+li $a1, 20 		# set the location of the second vehicle
+li $a2, 1536		# set the location of the second road
+
+jal colour_obstacle_line
 
 
 #
