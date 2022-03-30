@@ -36,26 +36,39 @@ li $t6, 0xffff00	# t6 stores the yellow colour for cars
 la $t9, vehicles_1	# $t9 holds address of array vehicles
 add $t4, $zero, $zero 	# $t4 holds i = 0
 add $t1, $zero, 128 	# $t1 holds 128
+addi $a0, $a0, 0 	# set the location of the first vehicle ($a0 < $a1)
+addi $a1, $a1, 16 	# set the location of the second vehicle
 
 space_array_loop:
 bge $t4, $t1, finish_road  # exit loop when i >= 128 
-li $t8, 0		   # reset $t8 to zero for each loop
+li $t8, 0		   # reset $t8 to zero for each loop. This will count our remainder
 
 sll $t2, $t4, 2 	   # $t2 = $t0 * 4 = i * 4 = offset 
 add $t3, $t9, $t2 	   # $t3 = addr(A) + i * 4 = addr(A[i])
 sw $t5, 0($t3) 		   # colour it grey (A[i] = 0x808080)
 
 add $t8, $t4, 0		   # Assign the value of $t4 to $t8
-addi $t2, $zero, 32 	   # assign $t1 to be 32
-div $t8, $t2		   # Divide $t8 by 32
+addi $t2, $zero, 32 	   # assign $t2 to be 32
+div $t8, $t2		   # Divide $t8 (value of $t4, the index) by 32
 mfhi $t7 		   # Store the remainder of the division to $t7 
 
-ble $t7, 8, colour_yellow  	# if $t7 <= 8, it represents a car pixel.
-bge $t7, 16, double_check_range # if $t7 >= 16, check if the value is below 24 before assigning colour.
+# Colour in the vehicle pixels 
+
+bge $t7, $a0, double_check_range_1	# if $t7 >= $a0, check if the value is within $a0 + 8 before assigning colour.
 j end_colouring
  
-double_check_range:
-ble $t7, 24, colour_yellow 	# if $t7 <= 24, that means it is a car pixel.
+double_check_range_1:
+addi $t2, $a0, 8		# add 8 to the x position of car, getting the full width of the car
+ble $t7, $t2, colour_yellow 	# if $t7 <= 24, that means it is a car pixel.
+j check_next
+
+check_next: 
+bge $t7, $a1, double_check_range_2 	# if $t7 <= 24, that means it is a car pixel.
+j end_colouring
+
+double_check_range_2:
+addi $t2, $a1, 8		# add 8 to the x position of car, getting the full width of the car
+ble $t7, $t2, colour_yellow 	# if $t7 <= 24, that means it is a car pixel.
 j end_colouring
 		
 colour_yellow:	
