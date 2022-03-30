@@ -23,6 +23,9 @@ river_2:     	.space 512			# 4*32*4 bytes allocated for the second river
 # Road and Vehicles -----------
 #
 
+
+# FIRST ROW OF ROAD
+
 # Allocate the colours into the .space variable
 
 lw $t0, displayAddress	# $t0 stores the base address for display
@@ -68,18 +71,20 @@ finish_road:
 
 # Paint the actual vehicle and road 
 
-lw $t0, displayAddress	# reset $t0 to 0 to use as index again
+lw $t0, displayAddress	# set $t0 as the base address for the display
 li $t2, 0 		# reset $t2 to 0 to use as offset again
 li $t4, 0 		# reset $t4 to 0 
 li $t3, 0 		# reset $t3 to 0 
 li $t5, 0x808080 	# $t5 stores the grey colour used for the road
 li $t8, 0
+li $t6, 0
+li $t7, 0
 addi $t6, $t6, 640 	# since the road starts at (0, 20) and 20 * 32 = 640
 addi $t7, $t7, 768	# set $t7 to 768
 addi $t0, $t0, 2560 	# set $t0 as the first painted pixel
 
 paint_loop:
-beq $t6, $t7, finish_paint_loop 	# Branch to Exit if $t6 == 768
+beq $t6, $t7, finish_paint_loop 	# Branch to Exit if $t6 /= 768
 sll $t2, $t4, 2 	   		# $t2 = $t4 * 4 = i * 4 = offset
 add $t3, $t9, $t2 	   		# $t3 = addr(A) + i * 4 = addr(A[i])
 lw $t8, 0($t3)				# load the value of $t3 into register $t8
@@ -127,9 +132,6 @@ j draw_destination
 
 end_draw_destination:
 
-# draw the river
-
-
 # draw the middle green land
 addi $t4, $t4, 256		# set $t4 to 512. Since $t4 was last 256, 512 = 256 + 256 
 addi $t5, $t5, 384		# set $t5 to 640. ($t5 was last 256, and 640 = 258 + 384)
@@ -144,8 +146,6 @@ addi $t4, $t4, 1		# incrment $t4 by 1
 j draw_middle
 
 end_draw_middle:
-
-# draw the road
 
 
 # draw the starting green land 
