@@ -114,104 +114,172 @@ skip_draw_safe_space_function:	# Skip the function
 
 ###### DRAW RIVERS AND LOGS ####### 
 
-# ---- STORE all the pixels in the .space array ----
+# Road 1 -----
 
-# $a0 and $a1 are the height and the width of the river/log, respectively 
-addi $a0, $zero, 4	# set height = 4
-addi $a1, $zero, 32	# set width = 32
+# Set parameters for allocate_memory
+addi $a2, $zero, 0 	# set the x location of the first car 
+addi $a3, $zero, 16 	# set the x location of the second car
 
-# $a1 and $a2 are the locations of the two logs/cars
-addi $a2, $zero, 0 	# set the x location of the first vehicle ($a0 < $a1)
-addi $a3, $zero, 16 	# set the x location of the second vehicle
+li $t7, 0x808080 	# $t7 stores the grey colour used for the road 
+li $t8, 0xffff00	# $t8 stores the yellow colour for cars 
 
-# Set some values
-lw $t0, displayAddress	# $t0 stores the base address for display
-li $t7, 0x808080 	# $t7 stores the grey colour used for the road
-li $t8, 0xffff00	# $t8 stores the yellow colour for cars
-la $t9, vehicles_1	# $t9 holds address of array vehicles
-add $t6, $zero, $zero 	# Set index value ($t6) to zero. This will be index i for storing into the array.
-# addi $t5, $zero, 128	# $t5 will be the terminating condition for the index (needed? i mean you have height and 
-			# width of rectangle already)
+la $t9, vehicles_1	# $t9 holds address of array vehicles_1 
 
-# -------
+jal allocate_memory
 
-# Draw a rectangle
- 
-add $t1, $zero, $zero			# Set index value ($t1) to zero. This will be a counter for the height.
+# Set parameters for paint_pixels
+li $a1, 2560		# $a1 determines where road1 should start(each row is 128) 
+jal paint_pixels
 
-draw_obstacle_rectangle_loop:
-beq $t1, $a0, done_obstacle_draw 	# If $t1 == height ($a0), jump to end
 
-# Draw line
-add $t2, $zero, $zero			# Set index value ($t2) to zero. This will be a counter for width.
 
-draw_obstacle_line_loop:
-beq $t2, $a1, end_draw_obstacle_line 	# If $t2 == width ($a1), jump to end
+# Road 2 -----
 
-sll $t3, $t6, 2 	   		# $t3 = $t6 * 4 = i * 4 = offset 
-add $t4, $t9, $t3 	   		# $t4 = addr(A) + i * 4 = addr(A[i]) 
+# Set parameters for allocate_memory
+addi $a2, $zero, 4 	# set the x location of the first car 
+addi $a3, $zero, 20 	# set the x location of the second car
 
-# Check if $t3 >= $a2
-bge $t2, $a2, double_check_range_1	# if $t3 >= $a2, check if the value is within $a2 + 8 before assigning colour.
-j colour_grey				# if $t3 <= $a2, it is a road pixel
+li $t7, 0x808080 	# $t7 stores the grey colour used for the road 
+li $t8, 0xffff00	# $t8 stores the yellow colour for cars 
 
-# Check if $t3 <= $a2 + 8
-double_check_range_1:
-addi $t5, $a2, 8			# add 8 to the x position of car, getting the full width of the car1
-ble $t2, $t5, colour_yellow 		# if $t3 <= $a2 + 8, that means it is a car1 pixel.
-j check_next				# if $t3 >= $a2 + 8, check if it passes the x position of car2
+la $t9, vehicles_2	# $t9 holds address of array vehicles_2
 
-# Check if $t3 >= $a3
-check_next: 
-bge $t2, $a3, double_check_range_2 	# if $t3 >= $a3, check if the value is within $a3 + 8 before assigning colour.
-j colour_grey				# if $t3 <= $a3, it is a road pixel
+jal allocate_memory
 
-double_check_range_2:
-addi $t5, $a3, 8			# add 8 to the x position of car2, getting the full width of the car
-ble $t2, $t5, colour_yellow 		# if $t3 <= $a3 + 8, that means it is a car pixel.
-j colour_grey				# if $t3 >= $a3 + 8, it is a road pixel
+# Set parameters for paint_pixels
+li $a1, 3072		# $a1 determines where the road2 should start(each row is 128) 
+jal paint_pixels
+
+
+
+# River 1 -----
+
+# Set parameters for allocate_memory
+addi $a2, $zero, 0 	# set the x location of the first log 
+addi $a3, $zero, 16 	# set the x location of the second log
+
+li $t7, 0x00008b 	# $t7 stores the blue colour used for the river 
+li $t8, 0x964b00	# $t8 stores the brown colour for logs 
+
+la $t9, river_1		# $t9 holds address of array river_1 
+
+jal allocate_memory
+
+# Set parameters for paint_pixels
+li $a1, 1024		# $a1 determines where the river1 should start(each row is 128) 
+jal paint_pixels
+
+
+
+
+# River 2 -----
+
+# Set parameters for allocate_memory
+addi $a2, $zero, 4 	# set the x location of the first log 
+addi $a3, $zero, 20 	# set the x location of the second log
+
+li $t7, 0x00008b 	# $t7 stores the blue colour used for the river 
+li $t8, 0x964b00	# $t8 stores the brown colour for logs 
+
+la $t9, river_2		# $t9 holds address of array river_2 
+
+jal allocate_memory
+
+# Set parameters for paint_pixels
+li $a1, 1536		# $a1 determines where river2 should start(each row is 128) 
+jal paint_pixels
+
+
+j skip_memory_and_pixels_functions	# Skip the functions below
+
+# FUNCTION: Store all the pixels in the .space array
+allocate_memory:
+	# $a0 and $a1 are the height and the width of the river/log, respectively 
+	addi $a0, $zero, 4		# set height = 4
+	addi $a1, $zero, 32		# set width = 32
+
+	# Set some values
+	lw $t0, displayAddress		# $t0 stores the base address for display
+	add $t6, $zero, $zero 		# Set index value ($t6) to zero. This will be index i for storing into the array.
+
+	# Draw a rectangle
+	add $t1, $zero, $zero			# Set index value ($t1) to zero. This will be a counter for the height.
+
+	draw_obstacle_rectangle_loop:
+	beq $t1, $a0, done_obstacle_draw 	# If $t1 == height ($a0), jump to end
+
+	# Draw line
+	add $t2, $zero, $zero			# Set index value ($t2) to zero. This will be a counter for width.
+
+	draw_obstacle_line_loop:
+	beq $t2, $a1, end_draw_obstacle_line 	# If $t2 == width ($a1), jump to end
+
+	sll $t3, $t6, 2 	   		# $t3 = $t6 * 4 = i * 4 = offset 
+	add $t4, $t9, $t3 	   		# $t4 = addr(A) + i * 4 = addr(A[i]) 
+
+	# Check if $t2 >= $a2
+	bge $t2, $a2, double_check_range_1	# if $t2 >= $a2, check if the value is within $a2 + 8 before assigning colour.
+	j colour_grey				# if $t2 <= $a2, it is a road pixel
+
+	# Check if $t2 <= $a2 + 8
+	double_check_range_1:
+	addi $t5, $a2, 8			# add 8 to the x position of car, getting the full width of the car1
+	ble $t2, $t5, colour_yellow 		# if $t2 <= $a2 + 8, that means it is a car1 pixel.
+	j check_next				# if $t2 >= $a2 + 8, check if it passes the x position of car2
+
+	# Check if $t2 >= $a3
+	check_next: 
+	bge $t2, $a3, double_check_range_2 	# if $t2 >= $a3, check if the value is within $a3 + 8 before assigning colour.
+	j colour_grey				# if $t2 <= $a3, it is a road pixel
+
+	double_check_range_2:
+	addi $t5, $a3, 8			# add 8 to the x position of car2, getting the full width of the car
+	ble $t2, $t5, colour_yellow 		# if $t2 <= $a3 + 8, that means it is a car pixel.
+	j colour_grey				# if $t2 >= $a3 + 8, it is a road pixel
 		
-colour_yellow:	
-sw $t8, 0($t4) 		   		# assign yellow (A[i] = 0xffff00)		   			  	   			   
-j done_colouring
+	colour_yellow:	
+	sw $t8, 0($t4) 		   		# assign yellow (A[i] = 0xffff00)		   			  	   			   
+	j done_colouring
 
-colour_grey:
-sw $t7, 0($t4) 		   		# assign grey (A[i] = 0x808080)
+	colour_grey:
+	sw $t7, 0($t4) 		   		# assign grey (A[i] = 0x808080)
 
-done_colouring:	   				   			  		   			   			   			   			   			   				   			  		   			   			   			   			   		   				   			  		   			   			   			   			   			   				   			  		   			   			   			   			   
-addi $t2, $t2, 1 	   		# increment width by 1 
-addi $t6, $t6, 1			# increment array counter by 1
-j draw_obstacle_line_loop	   	# Finish drawing line
-end_draw_obstacle_line:
+	done_colouring:	
+	   				   			  		   			   			   			   			   			   				   			  		   			   			   			   			   		   				   			  		   			   			   			   			   			   				   			  		   			   			   			   			   
+	addi $t2, $t2, 1 	   		# increment width by 1 
+	addi $t6, $t6, 1			# increment array counter by 1
+	j draw_obstacle_line_loop	   	
+	end_draw_obstacle_line:			# Finish drawing line
 
-addi $t1, $t1, 1			#   Increment $t1 by 1
-j draw_obstacle_rectangle_loop		#   Jump to start of rectangle drawing loop
+	addi $t1, $t1, 1			# Increment $t1 （height）by 1
+	j draw_obstacle_rectangle_loop		#  Jump to start of rectangle drawing loop
 
-done_obstacle_draw:		# When $t1 == height ($a0), the drawing is done.
-######
+	done_obstacle_draw:			# When $t1 == height ($a0), the drawing is done.
+jr $ra
+	
 
+# FUNCTION: paint all the pixels in the .space array 
+paint_pixels:
+	# Set some values 
+	lw $t0, displayAddress	# set $t0 as the base address for the display
+	add $t0, $t0, $a1 	# Set $t0 to the pixel indicated by $a1
+	li $t1, 0		# $t1 (represents index i) and $t2 determine how many 
+	li $t2, 128		# rows to paint (each row is 32). 
 
-# ---- PAINT all the pixels in the .space array ----
+	paint_loop:
+	beq $t1, $t2, finish_paint_loop 	# Branch to Exit if $t1 == $t2
+	sll $t3, $t1, 2 	   		# $t3 = $t4 * 4 = i * 4 = offset
+	add $t4, $t9, $t3 	   		# $t4 = addr(A) + i * 4 = addr(A[i])
+	lw $t5, 0($t4)				# load the value of $t4 into register $t5
+	sw $t5, 0($t0)				# paint the first unit on the first row green. 
+	addi $t1, $t1, 1 	  		# increment i 
+	addi $t0, $t0, 4			# increment $t0 by 4
+	j paint_loop
 
-# Set some values 
-lw $t0, displayAddress	# set $t0 as the base address for the display
-li $a1, 2560		# $a1 determines where the road/river should start(each row is 128)
-add $t0, $t0, $a1 	# Set $t0 to the pixel indicated by $a1
-li $t1, 0		# $t1 (represents index i) and $t2 determine how many 
-li $t2, 128		# rows to paint (each row is 32). 
+	finish_paint_loop:
+jr $ra
 
-paint_loop:
-beq $t1, $t2, finish_paint_loop 	# Branch to Exit if $t1 == $t2
-sll $t3, $t1, 2 	   		# $t3 = $t4 * 4 = i * 4 = offset
-add $t4, $t9, $t3 	   		# $t4 = addr(A) + i * 4 = addr(A[i])
-lw $t5, 0($t4)				# load the value of $t4 into register $t5
-sw $t5, 0($t0)				# paint the first unit on the first row green. 
-addi $t1, $t1, 1 	  		# increment i 
-addi $t0, $t0, 4			# increment $t0 by 4
-j paint_loop
-
-finish_paint_loop:
-
+skip_memory_and_pixels_functions:
 ######## DRAW FROG ########
 
 # Set some values 
