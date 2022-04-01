@@ -116,67 +116,80 @@ skip_draw_safe_space_function:	# Skip the function
 
 # ---- STORE all the pixels in the .space array ----
 
-# Location values 
-li $a1, 0 	# set the location of the first vehicle ($a0 < $a1)
-li $a2, 16 	# set the location of the second vehicle
+# $a0 and $a1 are the height and the width of the river/log, respectively 
+addi $a0, $zero, 4	# set height = 4
+addi $a1, $zero, 32	# set width = 32
+
+# $a1 and $a2 are the locations of the two logs/cars
+addi $a2, $zero, 0 	# set the x location of the first vehicle ($a0 < $a1)
+addi $a3, $zero, 16 	# set the x location of the second vehicle
 
 # Set some values
 lw $t0, displayAddress	# $t0 stores the base address for display
 li $t7, 0x808080 	# $t7 stores the grey colour used for the road
 li $t8, 0xffff00	# $t8 stores the yellow colour for cars
 la $t9, vehicles_1	# $t9 holds address of array vehicles
+add $t6, $zero, $zero 	# Set index value ($t6) to zero. This will be index i for storing into the array.
+# addi $t5, $zero, 128	# $t5 will be the terminating condition for the index (needed? i mean you have height and 
+			# width of rectangle already)
 
-# Store all the pixels in the array 
+# -------
 
-# Set loop conditions
-add $t1, $zero, $zero 	# $t1 holds i = 0
-add $t2, $zero, 128 	# $t2 holds 128
+# Draw a rectangle
+ 
+add $t1, $zero, $zero			# Set index value ($t1) to zero. This will be a counter for the height.
 
-space_array_loop:
-bge $t1, $t2, finish_road  # exit loop when i >= 128 
+draw_obstacle_rectangle_loop:
+beq $t1, $a0, done_obstacle_draw 	# If $t1 == height ($a0), jump to end
 
-sll $t4, $t1, 2 	   # $t4 = $t1 * 4 = i * 4 = offset 
-add $t5, $t9, $t4 	   # $t5 = addr(A) + i * 4 = addr(A[i]) (replace the value of $t4)
+# Draw line
+add $t2, $zero, $zero			# Set index value ($t2) to zero. This will be a counter for width.
 
-add $t6, $t4, 0		   # Assign the value of $t4 to $t6
-addi $t3, $zero, 32 	   # Assign $t3 to be 32
-div $t6, $t3		   # Divide $t6 (value of $t4, the offset) by 32
-mfhi $t3 		   # Store the remainder of the division to $t3
+draw_obstacle_line_loop:
+beq $t2, $a1, end_draw_obstacle_line 	# If $t2 == width ($a1), jump to end
 
-# Assign the proper colour to the array 
-
-# Check if $t3 >= $a1
-bge $t3, $a1, double_check_range_1	# if $t3 >= $a1, check if the value is within $a1 + 8 before assigning colour.
-j colour_grey				# if $t3 <= $a1, it is a road pixel
-
-# Check if $t3 <= $a1 + 8
-double_check_range_1:
-addi $t6, $a1, 8			# add 8 to the x position of car, getting the full width of the car1
-ble $t3, $t6, colour_yellow 		# if $t3 <= $a1 + 8, that means it is a car pixel.
-j check_next				# if $t3 >= $a1 + 8, check if it passes the x position of car2
+sll $t3, $t6, 2 	   		# $t3 = $t6 * 4 = i * 4 = offset 
+add $t4, $t9, $t3 	   		# $t4 = addr(A) + i * 4 = addr(A[i]) 
 
 # Check if $t3 >= $a2
-check_next: 
-bge $t3, $a2, double_check_range_2 	# if $t3 >= $a2, check if the value is within $a2 + 8 before assigning colour.
+bge $t2, $a2, double_check_range_1	# if $t3 >= $a2, check if the value is within $a2 + 8 before assigning colour.
 j colour_grey				# if $t3 <= $a2, it is a road pixel
 
+# Check if $t3 <= $a2 + 8
+double_check_range_1:
+addi $t5, $a2, 8			# add 8 to the x position of car, getting the full width of the car1
+ble $t2, $t5, colour_yellow 		# if $t3 <= $a2 + 8, that means it is a car1 pixel.
+j check_next				# if $t3 >= $a2 + 8, check if it passes the x position of car2
+
+# Check if $t3 >= $a3
+check_next: 
+bge $t2, $a3, double_check_range_2 	# if $t3 >= $a3, check if the value is within $a3 + 8 before assigning colour.
+j colour_grey				# if $t3 <= $a3, it is a road pixel
+
 double_check_range_2:
-addi $t6, $a2, 8			# add 8 to the x position of car2, getting the full width of the car
-ble $t3, $t6, colour_yellow 		# if $t3 <= $a2 + 8, that means it is a car pixel.
-j colour_grey				# if $t3 >= $a2 + 8, it is a road pixel
+addi $t5, $a3, 8			# add 8 to the x position of car2, getting the full width of the car
+ble $t2, $t5, colour_yellow 		# if $t3 <= $a3 + 8, that means it is a car pixel.
+j colour_grey				# if $t3 >= $a3 + 8, it is a road pixel
 		
 colour_yellow:	
-sw $t8, 0($t5) 		   		# assign yellow (A[i] = 0xffff00)		   			  	   			   
+sw $t8, 0($t4) 		   		# assign yellow (A[i] = 0xffff00)		   			  	   			   
 j done_colouring
 
 colour_grey:
-sw $t7, 0($t5) 		   		# assign grey (A[i] = 0x808080)
+sw $t7, 0($t4) 		   		# assign grey (A[i] = 0x808080)
 
 done_colouring:	   				   			  		   			   			   			   			   			   				   			  		   			   			   			   			   		   				   			  		   			   			   			   			   			   				   			  		   			   			   			   			   
-addi $t1, $t1, 1 	   		# increment i 
-j space_array_loop	   		# Go to the next pixel and do this again
+addi $t2, $t2, 1 	   		# increment width by 1 
+addi $t6, $t6, 1			# increment array counter by 1
+j draw_obstacle_line_loop	   	# Finish drawing line
+end_draw_obstacle_line:
 
-finish_road:
+addi $t1, $t1, 1			#   Increment $t1 by 1
+j draw_obstacle_rectangle_loop		#   Jump to start of rectangle drawing loop
+
+done_obstacle_draw:		# When $t1 == height ($a0), the drawing is done.
+######
+
 
 # ---- PAINT all the pixels in the .space array ----
 
