@@ -52,75 +52,7 @@ log3_x:		.word 4
 log4_x:		.word 20
 
 .text
-repaint:
-
-###### DRAW SAFE SPACE LOCATIONS ####### 
-
-# Destination safe space --
-
-lw $t0, displayAddress 	# $t0 stores the base address for display
-li $t3, 0x4dad53 	# $t3 stores the green colour code
-addi $t0, $t0, 0	# start drawing at the start of the display. (basic pixel num)
-
-# $a0 and $a1 are the height and the width of the rectangle, respectively 
-addi $a0, $zero, 8	# set height = 6
-addi $a1, $zero, 32	# set width = 10
-
-jal draw_safe_space
-
-# Middle safe space --
-
-lw $t0, displayAddress 	# $t0 stores the base address for display
-li $t3, 0xc2b280 	# $t3 stores the green colour code
-addi $t0, $t0, 2048	# start drawing at the start of the display. (basic pixel num)
-
-# $a0 and $a1 are the height and the width of the rectangle, respectively 
-addi $a0, $zero, 4	# set height = 6
-addi $a1, $zero, 32	# set width = 10
-jal draw_safe_space
-
-# Beginning safe space --
-
-lw $t0, displayAddress 	# $t0 stores the base address for display
-li $t3, 0x4dad53 	# $t3 stores the green colour code
-addi $t0, $t0, 3584	# start drawing at the start of the display. (basic pixel num)
-
-# $a0 and $a1 are the height and the width of the rectangle, respectively 
-addi $a0, $zero, 4	# set height = 6
-addi $a1, $zero, 32	# set width = 10
-jal draw_safe_space
-
-j skip_draw_safe_space_function 	# Skip the function so that it doesn't run again
-
-# FUNCTION: Draw rectangle for safe space
-
-draw_safe_space:
-	# Draw a rectangle:
-	add $t1, $zero, $zero	# Set index value ($t1) to zero
-	draw_rect_loop:
-	beq $t1, $a0, done_draw # If $t1 == height ($a0), jump to end
-
-	# Draw a line:
-	add $t2, $zero, $zero	# Set index value ($t2) to zero
-	draw_line_loop:
-	beq $t2, $a1, end_draw_line  # If $t2 == width ($a1), jump to end
-	sw $t3, 0($t0)		#   Draw a pixel at memory location $t0
-	addi $t0, $t0, 4	#   Increment $t0 by 4
-	addi $t2, $t2, 1	#   Increment $t2 by 1
-	j draw_line_loop	#   Jump to start of line drawing loop
-	end_draw_line:
-
-	# addi $t0, $t0, 128	# Set $t0 to the first pixel of the next line.
-			# Note: This value really should be calculated.
-	addi $t1, $t1, 1	#   - Increment $t1 by 1
-	j draw_rect_loop	#   - Jump to start of rectangle drawing loop
-
-	done_draw:		# When $t1 == height ($a0), the drawing is done.
-jr $ra
-
-skip_draw_safe_space_function:	# Skip the function
-
-###### DRAW RIVERS AND LOGS ####### 
+##### INITIAL ROAD PAINT #####
 
 # Road 1 -----
 
@@ -198,9 +130,7 @@ jal allocate_memory
 li $a1, 1536		# $a1 determines where river2 should start(each row is 128) 
 jal paint_pixels
 
-
-j skip_memory_and_pixels_functions	# Skip the functions below
-
+j skip_allocate_memory_func
 # FUNCTION: Store all the pixels in the .space array
 allocate_memory:
 	# $a0 and $a1 are the height and the width of the river/log, respectively 
@@ -270,9 +200,97 @@ allocate_memory:
 	done_obstacle_draw:			# When $t1 == height ($a0), the drawing is done.
 jr $ra
 
+skip_allocate_memory_func:
 
+#############
 
-	
+######### MAIN LOOP ########
+repaint:
+
+###### DRAW SAFE SPACE LOCATIONS ####### 
+
+# Destination safe space --
+
+lw $t0, displayAddress 	# $t0 stores the base address for display
+li $t3, 0x4dad53 	# $t3 stores the green colour code
+addi $t0, $t0, 0	# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 8	# set height = 6
+addi $a1, $zero, 32	# set width = 10
+
+jal draw_safe_space
+
+# Middle safe space --
+
+lw $t0, displayAddress 	# $t0 stores the base address for display
+li $t3, 0xc2b280 	# $t3 stores the green colour code
+addi $t0, $t0, 2048	# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 4	# set height = 6
+addi $a1, $zero, 32	# set width = 10
+jal draw_safe_space
+
+# Beginning safe space --
+
+lw $t0, displayAddress 	# $t0 stores the base address for display
+li $t3, 0x4dad53 	# $t3 stores the green colour code
+addi $t0, $t0, 3584	# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 4	# set height = 6
+addi $a1, $zero, 32	# set width = 10
+jal draw_safe_space
+
+j skip_draw_safe_space_function 	# Skip the function so that it doesn't run again
+
+# FUNCTION: Draw rectangle for safe space
+
+draw_safe_space:
+	# Draw a rectangle:
+	add $t1, $zero, $zero	# Set index value ($t1) to zero
+	draw_rect_loop:
+	beq $t1, $a0, done_draw # If $t1 == height ($a0), jump to end
+
+	# Draw a line:
+	add $t2, $zero, $zero	# Set index value ($t2) to zero
+	draw_line_loop:
+	beq $t2, $a1, end_draw_line  # If $t2 == width ($a1), jump to end
+	sw $t3, 0($t0)		#   Draw a pixel at memory location $t0
+	addi $t0, $t0, 4	#   Increment $t0 by 4
+	addi $t2, $t2, 1	#   Increment $t2 by 1
+	j draw_line_loop	#   Jump to start of line drawing loop
+	end_draw_line:
+
+	# addi $t0, $t0, 128	# Set $t0 to the first pixel of the next line.
+			# Note: This value really should be calculated.
+	addi $t1, $t1, 1	#   - Increment $t1 by 1
+	j draw_rect_loop	#   - Jump to start of rectangle drawing loop
+
+	done_draw:		# When $t1 == height ($a0), the drawing is done.
+jr $ra
+
+skip_draw_safe_space_function:	# Skip the function
+
+###### DRAW RIVERS AND LOGS ####### 
+
+la $t9, vehicles_1	# $t9 holds address of array vehicles_1 
+li $a1, 2560		# $a1 determines where road1 should start(each row is 128) 
+jal paint_pixels
+jal shift_array_left
+
+#la $t9, vehicles_3	# $t9 holds address of array vehicles_1 
+#li $a1, 3072		# $a1 determines where road1 should start(each row is 128) 
+#jal shift_array_right
+#jal paint_pixels
+
+#la $t9, river_1	# $t9 holds address of array vehicles_1 
+#li $a1, 1024		# $a1 determines where road1 should start(each row is 128) 
+#jal shift_array_left
+#jal paint_pixels
+
+j skip_memory_and_pixels_functions	# Skip the functions below
 
 # FUNCTION: paint all the pixels in the .space array 
 paint_pixels:
@@ -325,19 +343,15 @@ addi $t0, $t0, 124 	# Lower legs of frog
 sw $t4, 0($t0) 		# 
 sw $t4, 12($t0) 	# 
 
-
-
-### Increment the positions of the cars and logs for the next repaint ### 
+j sleep
 
 ### Shift ###
-la $t9, vehicles_1			#load the address of the memory space
-
-addi $s0, $t9, 0		# Find the address of the first pixel of one row
-lw $s1, 0($s0)			# load the value of $s0 into register $s1
+shift_array_left:
+ 
+addi $s0, $t9, 0			# Find the address of the first pixel of one row
+lw $s1, 0($s0)				# load the value of $s0 into register $s1
 
 add $t1, $zero, $zero 		# Set index value ($t1) to zero. This will be index i for storing into the array.
-sll $t2, $t1, 2 	   	# $t2 = $t1 * 4 = i * 4 = offset 
-add $t3, $t9, $t2 	   	# $t3 = addr(A) + i * 4 = addr(A[i]) 
 
 # $a0 and $a1 are the height and the width of the river/road, respectively 
 addi $a0, $zero, 4		# set height = 4
@@ -353,6 +367,9 @@ add $t5, $zero, $zero		# Set index value ($t5) to zero
 draw_line_loop_shift:
 beq $t5, $a1, end_draw_line_shift  	# If $t5 == width ($a1), jump to end
 
+sll $t2, $t1, 2 	   	# $t2 = $t1 * 4 = i * 4 = offset 
+add $t3, $t9, $t2 	   	# $t3 = addr(A) + i * 4 = addr(A[i]) 
+
 # Store the value of the next pixel
 addi $t6, $t1, 1		# -> Store the value of index $t1, incremented by one, to another register ($t6)
 sll $t6, $t6, 2			# Offset
@@ -360,8 +377,6 @@ add $t7, $t9, $t6		# -> Add this to $t9 store to register $t7
 lw $t8, 0($t7)			# -> Load word from $t7 to $t8
 sw $t8, 0($t3)			# -> Store this word into $t3
 
-# Store the value of the first pixel to the last pixel
-sw $s1, 0($t3)
 
 addi $t5, $t5, 1 		# Increment index ($t5)
 addi $t1, $t1, 1		# increment array counter by 1
@@ -369,12 +384,21 @@ addi $t1, $t1, 1		# increment array counter by 1
 j draw_line_loop_shift	#   - Jump to start of line drawing loop
 end_draw_line_shift:
 
+# Store the value of the first pixel to the last pixel
+sw $s1, 0($t3)
+
 addi $t4, $t4, 1	#   - Increment $t6 by 1
 j draw_rect_loop_shift	#   - Jump to start of rectangle drawing loop
  
 exit_shift:
 
+jr $ra
+
+### 
+
+
 ### Sleep ###
+sleep:
 li $v0, 32
 li $a0, 200
 syscall
