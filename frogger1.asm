@@ -36,6 +36,7 @@
 
 .data
 displayAddress: .word 0x10008000
+keyboard: 	.word 0xffff0000		# Memory address of keyboard
 frog_x:		.word 16			# set frog position
 frog_y:		.word 28 			# to (16,28) (placing FL leg)
 vehicles_1: 	.space 512			# 4*32*4 bytes allocated for the first road
@@ -50,12 +51,16 @@ log1_x:		.word 0
 log2_x:		.word 16
 log3_x:		.word 4
 log4_x:		.word 20
+green:		.word 0x4dad53
+lavendar:	.word 0x967bb8
+grey:		.word 0x808080 	
+yellow:		.word 0xffff00
 
 .text
+
 ##### INITIAL ROAD PAINT #####
 
 # Road 1 -----
-
 # Set parameters for allocate_memory
 addi $a2, $zero, 0 	# set the x location of the first car 
 addi $a3, $zero, 16 	# set the x location of the second car
@@ -70,7 +75,6 @@ jal allocate_memory
 
 
 # Road 2 -----
-
 # Set parameters for allocate_memory
 addi $a2, $zero, 4 	# set the x location of the first car 
 addi $a3, $zero, 20 	# set the x location of the second car
@@ -83,7 +87,6 @@ la $t9, vehicles_2	# $t9 holds address of array vehicles_2
 jal allocate_memory
 
 # River 1 -----
-
 # Set parameters for allocate_memory
 addi $a2, $zero, 0 	# set the x location of the first log 
 addi $a3, $zero, 16 	# set the x location of the second log
@@ -97,7 +100,6 @@ jal allocate_memory
 
 
 # River 2 -----
-
 # Set parameters for allocate_memory
 addi $a2, $zero, 4 	# set the x location of the first log 
 addi $a3, $zero, 20 	# set the x location of the second log
@@ -182,9 +184,10 @@ jr $ra
 
 skip_allocate_memory_func:
 
-#############
-
+############################
 ######### MAIN LOOP ########
+############################
+
 repaint:
 
 ###### DRAW SAFE SPACE LOCATIONS ####### 
@@ -300,11 +303,18 @@ paint_pixels:
 jr $ra
 
 skip_memory_and_pixels_functions:
+
 ######## DRAW FROG ########
 
+# FUNCTION: Draw frog
+li $t4, 0x967bb8				# Lavender colour for frogs
+jal draw_frog					# Call the draw frog function
+
+j skip_function					# Skip over the draw frog implementation
+
+draw_frog:
 # Set some values 
 lw $t0, displayAddress 		# $t0 stores the base address for display
-li $t4, 0x967bb8		# Lavender colour for frogs
 
 # Determine the position of the frog 
 la $t1, frog_x 			# $t1 has the same address as frog_x
@@ -329,7 +339,12 @@ addi $t0, $t0, 124 	# Lower legs of frog
 sw $t4, 0($t0) 		# 
 sw $t4, 12($t0) 	# 
 
-j sleep
+jr $ra
+
+skip_function:
+
+
+j skip_shift				# Skip the code that shifts the array
 
 ### Shift ###
 shift_array_left:
@@ -431,18 +446,68 @@ exit_shift_r:
 
 jr $ra
 
+skip_shift:					# Skips the code that shifts the array
+
+### FROG MOVEMENT ###
+lw $t0, 0xffff0000				# Memory address of keyboard
+beq $t0, 1, keyboard_input			# If there is a keystroke event, go to keyboard_input
+j skip_keyboard_input				# If not, skip the keyboard_input function
+keyboard_input:
+lw $t1, 0xffff0004				# Load the value of the keystroke event
+beq $t1, 0x61, respond_to_A			# If the keystroke was A, then go to respond_to_A
+j skip_A					# If not, skip the implementation and check if it is W 
+	respond_to_A: 				# Move frog left
+	# Delete frog from current position (paint over in green)
+	li $t4, 0x4dad53			# Lavender colour for frogs
+	jal draw_frog
+	
+	# Draw in new frog 
+	la $t2, frog_x 				# $t1 has the same address as frog_x
+	lw $t3, 0($t2)				# Fetch x position of frog
+	addi $t5, $zero, 4 			# Assign the value of 4 
+	sub $t6, $t3, $t5			# Original x position minus 16 (moves one frog left)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
+
+skip_A:
+beq $t1, 0x77, respond_to_W			# If the keystroke was W, then go to respond_to_W
+j skip_W					# If not, skip the implementation and check if it is S 
+	respond_to_W: 				# Move frog forward
+
+
+skip_W:
+beq $t1, 0x73, respond_to_S			# If the keystroke was S, then go to respond_to_S
+j skip_S					# If not, skip the implementation and check if it is D
+	respond_to_S: 				# Move frog back
+
+skip_S:
+beq $t1, 0x64, respond_to_D			# If the keystroke was D, then go to respond_to_D
+j skip_D					# If not, skip the implementation 
+	respond_to_D: 				# Move frog right
+
+skip_D:
+
+skip_keyboard_input:
+
+la $t9, keyboard				# Load the memory address of the keyboard
+add $t8, $t9, $zero 				# Assign $t8 the keyboard address
+addi $t7, $zero, 0				# Assign $t7 the value of 0
+sw $t7, 0($t9) 					# Assign the value of the memory address to zero to get ready for next keystroke event
+
 
 ### Sleep ###
-sleep:
 li $v0, 32
 li $a0, 200
 syscall
 
 
+
+
 j repaint		# Loop up to the very top again for repainting
 
 
-
+				
 Exit:
 li $v0, 10 # terminate the program gracefully
 syscall
