@@ -457,9 +457,6 @@ lw $t1, 0xffff0004				# Load the value of the keystroke event
 beq $t1, 0x61, respond_to_A			# If the keystroke was A, then go to respond_to_A
 j skip_A					# If not, skip the implementation and check if it is W 
 	respond_to_A: 				# Move frog left
-	# Delete frog from current position (paint over in green)
-	li $t4, 0x4dad53			# Lavender colour for frogs
-	jal draw_frog
 	
 	# Draw in new frog 
 	la $t2, frog_x 				# $t1 has the same address as frog_x
@@ -474,18 +471,44 @@ skip_A:
 beq $t1, 0x77, respond_to_W			# If the keystroke was W, then go to respond_to_W
 j skip_W					# If not, skip the implementation and check if it is S 
 	respond_to_W: 				# Move frog forward
+	
+	# Draw in new frog 
+	la $t2, frog_y 				# $t2 has the same address as frog_y
+	lw $t3, 0($t2)				# Fetch y position of frog
+	addi $t5, $zero, 4 			# Assign the value of 4 
+	sub $t6, $t3, $t5			# Original y position minus 4 (moves one frog forward)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
 
 
 skip_W:
 beq $t1, 0x73, respond_to_S			# If the keystroke was S, then go to respond_to_S
 j skip_S					# If not, skip the implementation and check if it is D
 	respond_to_S: 				# Move frog back
+	
+	# Draw in new frog 
+	la $t2, frog_y 				# $t2 has the same address as frog_y
+	lw $t3, 0($t2)				# Fetch y position of frog
+	addi $t5, $zero, 4 			# Assign the value of 32 
+	add $t6, $t3, $t5			# Original y position minus 32 (moves one frog forward)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
 
 skip_S:
 beq $t1, 0x64, respond_to_D			# If the keystroke was D, then go to respond_to_D
 j skip_D					# If not, skip the implementation 
 	respond_to_D: 				# Move frog right
 
+	# Draw in new frog 
+	la $t2, frog_x 				# $t2 has the same address as frog_x
+	lw $t3, 0($t2)				# Fetch y position of frog
+	addi $t5, $zero, 4 			# Assign the value of 32 
+	add $t6, $t3, $t5			# Original y position minus 32 (moves one frog forward)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
 skip_D:
 
 skip_keyboard_input:
@@ -498,7 +521,7 @@ sw $t7, 0($t9) 					# Assign the value of the memory address to zero to get read
 
 ### Sleep ###
 li $v0, 32
-li $a0, 200
+li $a0, 100
 syscall
 
 
