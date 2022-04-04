@@ -55,6 +55,7 @@ green:		.word 0x4dad53
 lavendar:	.word 0x967bb8
 grey:		.word 0x808080 	
 yellow:		.word 0xffff00
+blue: 		.word 0x00008b
 
 .text
 
@@ -518,10 +519,61 @@ add $t8, $t9, $zero 				# Assign $t8 the keyboard address
 addi $t7, $zero, 0				# Assign $t7 the value of 0
 sw $t7, 0($t9) 					# Assign the value of the memory address to zero to get ready for next keystroke event
 
+#### FROG DEATH #####
+# If the position of the frog is on a pixel that has a value of the yellow or blue, frog restarts 
+
+addi $t1, $zero, 0 				# Assign $t1 to be zero. We will add to it to make it the frog's position
+
+# Get the frog's position
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+la $t2, frog_y 			# $t2 has the same address as frog_y
+lw $t4, 0($t2)			# Fetch y position of frog
+sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
+sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
+add $t1, $t1, $t3		# Add x offset to $t1
+#add $t1, $t1, $t4		# Add y offset to $t1
+
+addi $s1, $zero, 3072		# Y position of the road
+beq $t4, $s1, assess_road2	# If the frog's y position is at the line of vehicle_2, go to assess_road2. 
+
+j skip_assess_road2		# If not, skip over assess_road2
+assess_road2:
+la $t0, vehicles_2 		# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+lw $t7, blue
+lw $t8, yellow
+
+#beq $t7, $t6, crash_river	# If the frog's position is on the river (blue), it returns to the start 
+
+#j skip_crash_river		# If the pixel colors are not the same, then skip crash_river
+#crash_river:
+#jal crash_func
+#skip_crash_river:
+
+beq $t8, $t6, crash_car		# If the frog's position is on a car (yellow), it returns to the start 
+j skip_crash_car		# If the pixel colors are not the same, then skip crash_car
+crash_car:
+jal crash_func
+skip_crash_car:
+skip_assess_road2:		# Skips assess_raod (when y position of frog is not the same as the road2
+
+j skip_crash_func		# Skip the crash_func implementation
+# FUNCTION: reset frog's position after dying
+crash_func:			# Reset frog's position to start 
+addi $t9, $zero, 16 		# Reset x position
+sw $t9, 0($t2)			# Store this reset position to frog_x
+addi $t9, $zero, 28 		# Reset y position
+sw $t9, 0($t2)			# Store this reset position to frog_y
+jr $ra
+skip_crash_func: 		# Skips the crash_func implementation
+
 
 ### Sleep ###
 li $v0, 32
-li $a0, 100
+li $a0, 300
 syscall
 
 
