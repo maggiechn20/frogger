@@ -574,18 +574,44 @@ jal crash_func
 skip_crash_car1:
 skip_assess_road1:		# Skips assess_raod (when y position of frog is not the same as the road2
 
+# River 2 
+addi $s1, $zero, 1536		# Y position of the road
+beq $t4, $s1, assess_river2	# If the frog's y position is at the line of vehicle_1, go to assess_road1. 
+
+j skip_assess_river2		# If not, skip over assess_road2
+assess_river2:
+la $t0, river_2			# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+
+beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), it returns to the start 
+j skip_crash_river2		# If the pixel colors are not the same, then skip crash_car
+crash_river2:
+jal crash_func
+skip_crash_river2:
+skip_assess_river2:		# Skips assess_river2 (when y position of frog is not the same as the road2
+
+
+# River 1 
+addi $s1, $zero, 1024		# Y position of the road
+beq $t4, $s1, assess_river1	# If the frog's y position is at the line of vehicle_1, go to assess_road1. 
+
+j skip_assess_river1		# If not, skip over assess_road2
+assess_river1:
+la $t0, river_1			# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+
+beq $t7, $t6, crash_river1	# If the frog's position is on a car (yellow), it returns to the start 
+j skip_crash_river1		# If the pixel colors are not the same, then skip crash_car
+crash_river1:
+jal crash_func
+skip_crash_river1:
+skip_assess_river1:		# Skips assess_river2 (when y position of frog is not the same as the road2
+
 j skip_crash_func		# Skip the crash_func implementation
-
-
-
-#beq $t7, $t6, crash_river	# If the frog's position is on the river (blue), it returns to the start 
-
-#j skip_crash_river		# If the pixel colors are not the same, then skip crash_river
-#crash_river:
-#jal crash_func
-#skip_crash_river:
-
-
 # FUNCTION: reset frog's position after dying
 crash_func:			# Reset frog's position to start 
 addi $t9, $zero, 16 		# Reset x position
