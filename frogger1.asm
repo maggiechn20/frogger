@@ -43,6 +43,7 @@ vehicles_1: 	.space 512			# 4*32*4 bytes allocated for the first road
 vehicles_2:     .space 512			# 4*32*4 bytes allocated for the second road
 river_1: 	.space 512			# 4*32*4 bytes allocated for the first river
 river_2:     	.space 512			# 4*32*4 bytes allocated for the second river
+target_reached: .word 0				# 1 when the frog reaches the goal, 0 if not.
 car1_x:		.word 0 
 car2_x: 	.word 16
 car3_x:		.word 4
@@ -642,6 +643,22 @@ sw $t9, 0($t2)			# Store this reset position to frog_y
 jr $ra
 skip_crash_func: 		# Skips the crash_func implementation
 
+
+
+### Reaches end goal ###
+# Check the frog position
+la $t2, frog_y 					# $t2 has the same address as frog_y
+lw $t4, 0($t2)					# Fetch y position of frog
+sll $t4, $t4, 7					# Multiply $t4 (frog y position) by 128
+addi $s1, $zero, 512				# Y position of the end goal (MAYBE CHANGE TO INCLUDE BOTH Y POSITIONS?
+ble $t4, $s1, goal_reached			# If the frog's y position is smaller than the y position  of the end goal rectangle, go change target reached
+# If the frog is at the end goal, then continue to change the memory address
+j goal_not_reached
+goal_reached:
+la $t0, target_reached				# Memory address of target_reached
+addi $t1, $zero, 1				# Store the value of 1 to $t1 
+sw $t1, 0($t0) 					# Store 1 as the value at the memory address of target_reached 
+goal_not_reached:
 
 ### Sleep ###
 li $v0, 32
