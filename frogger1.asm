@@ -266,10 +266,10 @@ jal paint_pixels
 jal shift_array_left
 
 
-#la $t9, vehicles_2	# $t9 holds address of array vehicles_1 
-#li $a1, 3072		# $a1 determines where road1 should start(each row is 128) 
-#jal paint_pixels
-#jal shift_array_right
+la $t9, vehicles_2	# $t9 holds address of array vehicles_1 
+li $a1, 3072		# $a1 determines where road1 should start(each row is 128) 
+jal paint_pixels
+jal shift_array_right
 
 la $t9, river_2	# $t9 holds address of array vehicles_1 
 li $a1, 1536		# $a1 determines where road1 should start(each row is 128) 
@@ -385,7 +385,7 @@ jr $ra
 
 shift_array_right:
  
-addi $s0, $t9, 512			# Find the address of the last pixel of one row
+addi $s0, $t9, 508			# Find the address of the last pixel of one row
 lw $s1, 0($s0)				# load the value of the last address of $t9 into register $s1
 
 add $t1, $zero, $zero 		# Set index value ($t1) to zero. This will be index i for storing into the array.
@@ -440,6 +440,7 @@ syscall
 
 
 j repaint		# Loop up to the very top again for repainting
+
 
 
 Exit:
