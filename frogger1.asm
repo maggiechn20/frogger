@@ -57,6 +57,10 @@ lavendar:	.word 0x967bb8
 grey:		.word 0x808080 	
 yellow:		.word 0xffff00
 blue: 		.word 0x00008b
+red: 		.word 0x8B0000
+black: 		.word 0x000000
+lives_left: 	.word 3 			# How many lives the frog has left 
+lives_display: 	.space 24 			# 6*4 bytes allocated for lives display
 
 .text
 
@@ -634,12 +638,22 @@ skip_assess_river1:		# Skips assess_river2 (when y position of frog is not the s
 
 j skip_crash_func		# Skip the crash_func implementation
 
-# FUNCTION: reset frog's position after dying
-crash_func:			# Reset frog's position to start 
+# FUNCTION: reset frog's position after dying AND delete a life
+crash_func:
+
+# Reset frog's position to start 
 addi $t9, $zero, 16 		# Reset x position
 sw $t9, 0($t2)			# Store this reset position to frog_x
 addi $t9, $zero, 28 		# Reset y position
 sw $t9, 0($t2)			# Store this reset position to frog_y
+
+# Delete a life 
+la $t1, lives_left		# Load the address of lives_left
+lw $t2, 0($t1) 			# Load the value of lives_left (0, 1, 2, 3)
+addi $t3, $zero, 1		# Assgin $t3 the value of 1 
+sub $t3, $t2, $t3 		# Use another register to minus one from the above value 
+sw $t3, 0($t1) 			# Store this new value to lives_left 
+
 jr $ra
 skip_crash_func: 		# Skips the crash_func implementation
 
@@ -659,6 +673,36 @@ la $t0, target_reached				# Memory address of target_reached
 addi $t1, $zero, 1				# Store the value of 1 to $t1 
 sw $t1, 0($t0) 					# Store 1 as the value at the memory address of target_reached 
 goal_not_reached:
+
+
+### LIVES REMAINING ##### 
+
+lw $t1, red
+
+# Set the display to start at 26 pixels from the left 
+lw $t0, displayAddress 	# $t0 stores the base address for display
+addi $t0, $t0, 232
+lw $t9, lives_left
+
+# If you have three lives remaining, load three req squares 
+beq $t9, 3, three_lives
+j not_three_lives
+three_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+not_three_lives:
+
+# If you have two lives remaining, load two red squares, and one black square
+# If you have one lives remaining, load 1 red squares, and two black square
+# If you have zero lives remaining, load three black squars and jump to the terminate game function (FOR NOW WE WILL DO EXIT)
+
+# draw function: draw out the lives remaining 
+# Set parameters for allocate_memory
+
 
 ### Sleep ###
 li $v0, 32
