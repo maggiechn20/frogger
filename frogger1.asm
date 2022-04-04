@@ -59,10 +59,17 @@ yellow:		.word 0xffff00
 blue: 		.word 0x00008b
 red: 		.word 0x8B0000
 black: 		.word 0x000000
+white: 		.word 0xffffff
+
+game_x: 	.word 3
+game_y:		.word 3
+
 lives_left: 	.word 3 			# How many lives the frog has left 
 lives_display: 	.space 24 			# 6*4 bytes allocated for lives display
 
 .text
+
+play:						# When game ends, keystroke Y jumps here to play again
 
 ##### INITIAL ROAD PAINT #####
 
@@ -678,6 +685,7 @@ goal_not_reached:
 ### LIVES REMAINING ##### 
 
 lw $t1, red
+lw $t2, black
 
 # Set the display to start at 26 pixels from the left 
 lw $t0, displayAddress 	# $t0 stores the base address for display
@@ -697,12 +705,163 @@ addi $t0, $t0, 8
 not_three_lives:
 
 # If you have two lives remaining, load two red squares, and one black square
-# If you have one lives remaining, load 1 red squares, and two black square
-# If you have zero lives remaining, load three black squars and jump to the terminate game function (FOR NOW WE WILL DO EXIT)
+beq $t9, 2, two_lives
+j not_two_lives
+two_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+not_two_lives:
 
+# If you have one lives remaining, load 1 red squares, and two black square
+beq $t9, 1, one_lives
+j not_one_lives
+one_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+not_one_lives:
+
+# If you have zero lives remaining, load three black squars and jump to the terminate game function (FOR NOW WE WILL DO EXIT)
+beq $t9, 0, no_lives
+j not_no_lives
+no_lives:
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+
+j game_over					# After all lives, jump to game_over
+not_no_lives:
 # draw function: draw out the lives remaining 
 # Set parameters for allocate_memory
 
+#### GAME OVER SCREEN #### 
+
+j skip_game_over		# Skip over implementation of game_over
+# Display game over screen
+
+game_over:
+
+# Set some values 
+lw $t0, displayAddress
+addi $a0, $zero, 32	# set height = 6
+addi $a1, $zero, 32	# set width = 10
+lw $t9, black 		# Get the colour black
+
+# Paint screen black 
+draw_black_screen:
+	# Draw a rectangle:
+	add $t1, $zero, $zero		# Set index value ($t1) to zero
+	draw_black_rect_loop:
+	beq $t1, $a0, done_draw_black 	# If $t1 == height ($a0), jump to end
+
+	# Draw a line:
+	add $t2, $zero, $zero		# Set index value ($t2) to zero
+	draw_black_line_loop:
+	beq $t2, $a1, end_draw_black_line  	# If $t2 == width ($a1), jump to end
+	sw $t9, 0($t0)			#   Draw a pixel at memory location $t0
+	addi $t0, $t0, 4		#   Increment $t0 by 4
+	addi $t2, $t2, 1	#   Increment $t2 by 1
+	j draw_black_line_loop	#   Jump to start of line drawing loop
+	end_draw_black_line:
+
+	addi $t1, $t1, 1	#   - Increment $t1 by 1
+	j draw_black_rect_loop	#   - Jump to start of rectangle drawing loop
+
+done_draw_black:		# When $t1 == height ($a0), the drawing is done.
+
+
+
+
+# ---------
+lw $t0, displayAddress
+lw $t1, white			# Get the white colour and store to $t1
+lw $t2, game_x			# Get the x position of the word game
+lw $t3, game_y			# Get the y position fo the word game 
+sll $t2, $t2, 2			# Time game_x by 4
+sll $t3, $t3, 7			# Time game_y by 128
+
+# LETTER G ----
+
+# Top horizontal stroke
+add $t0, $t0, $t2		# Add the x position
+add $t0, $t0, $t3		# Add the y position
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 4		# width of stroke
+jal letter_horizontal_line
+
+# Left vertical stroke
+addi $t0, $t0, 112
+sw $t1, 0($t0)			#   Draw a pixel at memory location $t0
+
+j ask_restart				# After writing 'Game over' end the game 
+
+j skip_horizontal_line_func
+letter_horizontal_line:
+add $s1, $zero, $zero 		# Set index value ($s1) to zero
+draw_stroke_rect_loop:
+beq $s1, $a0, done_stroke 	# If $t1 == height ($a0), jump to end
+# Draw a line:
+add $s2, $zero, $zero		# Set index value ($s2) to zero
+draw_stroke_line_loop:
+beq $s2, $a1, end_stroke_line  	# If $t2 == width ($a1), jump to end
+sw $t1, 0($t0)			#   Draw a pixel at memory location $t0
+addi $t0, $t0, 4		#   Increment $t0 by 4
+addi $s2, $s2, 1		#   Increment $t2 by 1
+j draw_stroke_line_loop	#   Jump to start of line drawing loop
+end_stroke_line:
+
+addi $s1, $s1, 1	#   - Increment $t1 by 1
+j draw_stroke_rect_loop	#   - Jum
+done_stroke:
+jr $ra 
+skip_horizontal_line_func: 
+
+skip_game_over:		# Skip over implementation of game_over
+
+j skip_ask_restart				# Skip implementation of ask_restart
+ask_restart:
+# Key stroke event to start game again
+lw $t0, 0xffff0000				# Memory address of keyboard
+beq $t0, 1, keyboard_input_r			# If there is a keystroke event, go to keyboard_input_r
+
+j skip_keyboard_input_r				# If not, skip the keyboard_input_r function
+keyboard_input_r:
+lw $t1, 0xffff0004				# Load the value of the keystroke event
+beq $t1, 0x79, respond_to_Y			# If the keystroke was Y, then go to respond_to_Y
+j skip_Y					# If not, skip the implementation and check if it is N
+	respond_to_Y: 				# Restart game 
+	la $t9, lives_left
+	addi $t8, $zero, 3
+	sw $t8, 0($t9)				# Restart so give back all three lives 
+	j play 					# FOR DEBUGGING PURPOSES SHOULD BE play
+
+skip_Y:
+beq $t1, 0x6E, respond_to_N			# If the keystroke was N, then go to respond_to_N
+j skip_N					# If not, skip the implementation 
+	respond_to_N: 				# Don't restart game 
+	lw $t2, displayAddress			# FOR DEBUG PURPOSES
+	lw $t3, red				# FOR DEBUG PURPOSES
+	sw $t3, 0($t2)				# FOR DEBUG PURPOSES
+	j Exit
+skip_N:
+skip_keyboard_input_r:
+j ask_restart
+la $t9, keyboard				# Load the memory address of the keyboard
+add $t8, $t9, $zero 				# Assign $t8 the keyboard address
+addi $t7, $zero, 0				# Assign $t7 the value of 0
+sw $t7, 0($t9) 	
+
+skip_ask_restart:
 
 ### Sleep ###
 li $v0, 32
@@ -710,12 +869,19 @@ li $a0, 300
 syscall
 
 
-
-
 j repaint		# Loop up to the very top again for repainting
 
 
+
+
+# X position of word game 
+
+
+# Y position of word game - 8? 
+# If y keystroke, then restart from the very beginning. 
+# If no, go to a separate screen that indicates game ended 
 				
 Exit:
+# ---
 li $v0, 10 # terminate the program gracefully
 syscall
