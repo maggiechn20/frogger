@@ -589,10 +589,12 @@ beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), it ret
 move_with_log:			# If the pixel colors are not the same, then move with the log.
 la $t2, frog_x 			# $t2 has the same address as frog_x
 lw $t3, 0($t2)			# Fetch x position of frog
+beq $t3, 28, hit_edge2		# Do not move if you are already at the end of display
 addi $t3, $t3, 1		# Move the frog to the right 
 sw $t3, 0($t2)			# Store the new frog x position to frog_x
 li $t4, 0x967bb8		# Lavender colour for frogs
 jal draw_frog			# Call the draw frog function
+hit_edge2:			# Skip over all the movement stuff because you are at the edge of display
 
 j skip_crash_river2		# Skip implementation of crash function
 crash_river2:
@@ -615,14 +617,18 @@ beq $t7, $t6, crash_river1	# If the frog's position is on a river (blue), it ret
 move_with_log2:			# If the pixel colors are not the same, then move with the log.
 la $t2, frog_x 			# $t2 has the same address as frog_x
 lw $t3, 0($t2)			# Fetch x position of frog
-addi $t3, $t3, 4		# Move the frog to the right 
+beq $t3, 0, hit_edge		# Do not move if you are already at the end of display
+addi $t7, $zero, 1
+sub $t3, $t3, $t7		# Move the frog to the left 
 sw $t3, 0($t2)			# Store the new frog x position to frog_x
 li $t4, 0x967bb8		# Lavender colour for frogs
 jal draw_frog			# Call the draw frog function
+hit_edge:
 
+j skip_crash_river1		# Skip implementation of crash function
 crash_river1:
 jal crash_func
-
+skip_crash_river1:
 skip_assess_river1:		# Skips assess_river2 (when y position of frog is not the same as the road2)
 
 j skip_crash_func		# Skip the crash_func implementation
