@@ -586,12 +586,19 @@ add $t5, $t5, $t1		# Add frog's x position offset to $t5
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
 
 beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), it returns to the start 
-j skip_crash_river2		# If the pixel colors are not the same, then skip crash_car
+move_with_log:			# If the pixel colors are not the same, then move with the log.
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+addi $t3, $t3, 1		# Move the frog to the right 
+sw $t3, 0($t2)			# Store the new frog x position to frog_x
+li $t4, 0x967bb8		# Lavender colour for frogs
+jal draw_frog			# Call the draw frog function
+
+j skip_crash_river2		# Skip implementation of crash function
 crash_river2:
 jal crash_func
-skip_crash_river2:
-skip_assess_river2:		# Skips assess_river2 (when y position of frog is not the same as the road2
-
+skip_crash_river2: 		# Skips implementation of crash function (frog was on log)
+skip_assess_river2:		# Skip implementation of assess_river2 (frog was not on the same y position as this river)
 
 # River 1 
 addi $s1, $zero, 1024		# Y position of the road
@@ -604,14 +611,22 @@ add $t5, $t0, $zero 		# Store the memory address to $t5
 add $t5, $t5, $t1		# Add frog's x position offset to $t5 
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
 
-beq $t7, $t6, crash_river1	# If the frog's position is on a car (yellow), it returns to the start 
-j skip_crash_river1		# If the pixel colors are not the same, then skip crash_car
+beq $t7, $t6, crash_river1	# If the frog's position is on a river (blue), it returns to the start 
+move_with_log2:			# If the pixel colors are not the same, then move with the log.
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+addi $t3, $t3, 4		# Move the frog to the right 
+sw $t3, 0($t2)			# Store the new frog x position to frog_x
+li $t4, 0x967bb8		# Lavender colour for frogs
+jal draw_frog			# Call the draw frog function
+
 crash_river1:
 jal crash_func
-skip_crash_river1:
-skip_assess_river1:		# Skips assess_river2 (when y position of frog is not the same as the road2
+
+skip_assess_river1:		# Skips assess_river2 (when y position of frog is not the same as the road2)
 
 j skip_crash_func		# Skip the crash_func implementation
+
 # FUNCTION: reset frog's position after dying
 crash_func:			# Reset frog's position to start 
 addi $t9, $zero, 16 		# Reset x position
