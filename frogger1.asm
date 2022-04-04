@@ -534,6 +534,10 @@ sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
 add $t1, $t1, $t3		# Add x offset to $t1
 #add $t1, $t1, $t4		# Add y offset to $t1
 
+lw $t7, blue
+lw $t8, yellow
+
+# Road 2
 addi $s1, $zero, 3072		# Y position of the road
 beq $t4, $s1, assess_road2	# If the frog's y position is at the line of vehicle_2, go to assess_road2. 
 
@@ -543,8 +547,36 @@ la $t0, vehicles_2 		# $t0 stores the base address for vehicles2
 add $t5, $t0, $zero 		# Store the memory address to $t5
 add $t5, $t5, $t1		# Add frog's x position offset to $t5 
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
-lw $t7, blue
-lw $t8, yellow
+
+beq $t8, $t6, crash_car2		# If the frog's position is on a car (yellow), it returns to the start 
+j skip_crash_car2		# If the pixel colors are not the same, then skip crash_car
+crash_car2:
+jal crash_func
+skip_crash_car2:
+skip_assess_road2:		# Skips assess_raod (when y position of frog is not the same as the road2
+
+
+# Road 1 
+addi $s1, $zero, 2560		# Y position of the road
+beq $t4, $s1, assess_road1	# If the frog's y position is at the line of vehicle_1, go to assess_road1. 
+
+j skip_assess_road1		# If not, skip over assess_road2
+assess_road1:
+la $t0, vehicles_1 		# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+
+beq $t8, $t6, crash_car1		# If the frog's position is on a car (yellow), it returns to the start 
+j skip_crash_car1		# If the pixel colors are not the same, then skip crash_car
+crash_car1:
+jal crash_func
+skip_crash_car1:
+skip_assess_road1:		# Skips assess_raod (when y position of frog is not the same as the road2
+
+j skip_crash_func		# Skip the crash_func implementation
+
+
 
 #beq $t7, $t6, crash_river	# If the frog's position is on the river (blue), it returns to the start 
 
@@ -553,14 +585,7 @@ lw $t8, yellow
 #jal crash_func
 #skip_crash_river:
 
-beq $t8, $t6, crash_car		# If the frog's position is on a car (yellow), it returns to the start 
-j skip_crash_car		# If the pixel colors are not the same, then skip crash_car
-crash_car:
-jal crash_func
-skip_crash_car:
-skip_assess_road2:		# Skips assess_raod (when y position of frog is not the same as the road2
 
-j skip_crash_func		# Skip the crash_func implementation
 # FUNCTION: reset frog's position after dying
 crash_func:			# Reset frog's position to start 
 addi $t9, $zero, 16 		# Reset x position
