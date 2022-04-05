@@ -67,6 +67,11 @@ game_y:		.word 4
 over_x:		.word 4 
 over_y: 	.word 13
 
+facing_left:	.word 0
+facing_forward: .word 1
+facing_right:   .word 0
+facing_back:  	.word 0
+
 lives_left: 	.word 3 			# How many lives the frog has left 
 lives_display: 	.space 24 			# 6*4 bytes allocated for lives display
 
@@ -342,7 +347,19 @@ sll $t3, $t3, 7			# Multiply $t3 (frog y position) by 128
 add $t0, $t0, $t2		# Add x offset to $t0
 add $t0, $t0, $t3		# Add y offset to $t0
 
-# Paint the frog 
+# Orientation of frog 
+lw $s0, facing_left
+lw $s1, facing_forward
+lw $s2, facing_right
+lw $s3, facing_back
+
+
+
+# WHEN FROG MOVES FORWARD ---------
+beq $s1, 1, facing_forward_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_forward_paint		# If not, then skip the implementation
+facing_forward_paint:
+
 sw $t4, 0($t0) 		# draw the front left leg at the specified frog_x and frog_y coordinates. 
 sw $t4, 12($t0) 	# draw the front right leg
 addi $t0, $t0, 128 	# Second Row of frog (upper half of body)
@@ -358,6 +375,97 @@ sw $t4, 0($t0) 		#
 sw $t4, 4($t0) 		#
 sw $t4, 8($t0) 		#
 sw $t4, 12($t0) 	#
+
+skip_facing_forward_paint:
+
+# WHEN FROG MOVES LEFT -------
+beq $s0, 1, facing_left_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_left_paint		# If not, then skip the implementation
+facing_left_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 
+sw $t4, 4($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 4($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 12($t0) 
+
+skip_facing_left_paint:
+
+
+# WHEN FROG MOVES RIGHT -------
+beq $s2, 1, facing_right_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_right_paint		# If not, then skip the implementation
+facing_right_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+skip_facing_right_paint:
+
+
+# WHEN FROG MOVES RIGHT -------
+beq $s3, 1, facing_back_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_back_paint		# If not, then skip the implementation
+facing_back_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+sw $t4, 12($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 12($t0) 
+
+skip_facing_back_paint:
 
 jr $ra
 
@@ -543,6 +651,17 @@ beq $t1, 0x61, respond_to_A			# If the keystroke was A, then go to respond_to_A
 j skip_A					# If not, skip the implementation and check if it is W 
 	respond_to_A: 				# Move frog left
 	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t7, 0($t9) 				# Set it to 1.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 0.
+	
 	# Draw in new frog 
 	la $t2, frog_x 				# $t1 has the same address as frog_x
 	lw $t3, 0($t2)				# Fetch x position of frog
@@ -556,6 +675,17 @@ skip_A:
 beq $t1, 0x77, respond_to_W			# If the keystroke was W, then go to respond_to_W
 j skip_W					# If not, skip the implementation and check if it is S 
 	respond_to_W: 				# Move frog forward
+	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t7, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 1.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 0.
 	
 	# Draw in new frog 
 	la $t2, frog_y 				# $t2 has the same address as frog_y
@@ -573,6 +703,17 @@ beq $t1, 0x73, respond_to_S			# If the keystroke was S, then go to respond_to_S
 j skip_S					# If not, skip the implementation and check if it is D
 	respond_to_S: 				# Move frog back
 	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_right 			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t7, 0($t9) 				# Set it to 1.
+	
 	# Draw in new frog 
 	la $t2, frog_y 				# $t2 has the same address as frog_y
 	lw $t3, 0($t2)				# Fetch y position of frog
@@ -587,6 +728,17 @@ beq $t1, 0x64, respond_to_D			# If the keystroke was D, then go to respond_to_D
 j skip_D					# If not, skip the implementation 
 	respond_to_D: 				# Move frog right
 
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t7, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 1.
+	
 	# Draw in new frog 
 	la $t2, frog_x 				# $t2 has the same address as frog_x
 	lw $t3, 0($t2)				# Fetch y position of frog
@@ -787,6 +939,18 @@ addi $t9, $zero, 16 		# Reset x position
 sw $t9, 0($t2)			# Store this reset position to frog_x
 addi $t9, $zero, 28 		# Reset y position
 sw $t9, 0($t2)			# Store this reset position to frog_y
+
+addi $t8, $zero, 0
+addi $t7, $zero, 1
+la $t9, facing_forward			# Get the (1/0) value of facing_forward
+sw $t7, 0($t9) 				# Set it to 0.
+la $t9, facing_left			# Get the (1/0) value of facing_left
+sw $t8, 0($t9) 				# Set it to 1.
+la $t9, facing_right			# Get the (1/0) value of facing_right
+sw $t8, 0($t9) 				# Set it to 0.
+la $t9, facing_back			# Get the (1/0) value of facing_back
+sw $t8, 0($t9) 				# Set it to 0.
+
 
 # Delete a life 
 la $t1, lives_left		# Load the address of lives_left
