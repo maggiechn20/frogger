@@ -778,8 +778,16 @@ addi $t3, $zero, 1		# Assgin $t3 the value of 1
 sub $t3, $t2, $t3 		# Use another register to minus one from the above value 
 sw $t3, 0($t1) 			# Store this new value to lives_left 
 
-# Death/Respawn animation
+# Death/Respawn animation WORK ON THIS
 li $t4, 0x000000				# Lavender colour for frogs
+
+# Generate sound tone  
+li $v0, 31
+li $a0, 39
+li $a1, 200
+li $a2, 65
+li $a3, 110
+syscall
 
 
 
@@ -798,9 +806,20 @@ ble $t4, $s1, goal_reached			# If the frog's y position is smaller than the y po
 # If the frog is at the end goal, then continue to change the memory address
 j goal_not_reached
 goal_reached:
+
+# Make sound
+li $v0, 33
+li $a0, 69
+li $a1, 100
+li $a2, 16
+li $a3, 110
+syscall
+
 la $t0, target_reached				# Memory address of target_reached
 addi $t1, $zero, 1				# Store the value of 1 to $t1 
 sw $t1, 0($t0) 					# Store 1 as the value at the memory address of target_reached 
+
+j Exit						# FOR DEBUGGING: Jump to exit first but we want it to jup to winning state
 goal_not_reached:
 
 
