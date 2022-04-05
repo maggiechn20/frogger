@@ -61,8 +61,8 @@ red: 		.word 0x8B0000
 black: 		.word 0x000000
 white: 		.word 0xffffff
 
-game_x: 	.word 3
-game_y:		.word 3
+game_x: 	.word 4
+game_y:		.word 4
 
 lives_left: 	.word 3 			# How many lives the frog has left 
 lives_display: 	.space 24 			# 6*4 bytes allocated for lives display
@@ -790,19 +790,266 @@ lw $t3, game_y			# Get the y position fo the word game
 sll $t2, $t2, 2			# Time game_x by 4
 sll $t3, $t3, 7			# Time game_y by 128
 
-# LETTER G ----
+# Row 1 
 
-# Top horizontal stroke
+# G -
 add $t0, $t0, $t2		# Add the x position
 add $t0, $t0, $t3		# Add the y position
 addi $a0, $zero, 1		# Height of stroke
-addi $a1, $zero, 4		# width of stroke
+addi $a1, $zero, 5		# width of stroke
 jal letter_horizontal_line
 
-# Left vertical stroke
-addi $t0, $t0, 112
-sw $t1, 0($t0)			#   Draw a pixel at memory location $t0
+# Space between G and A 
+addi $t0, $t0, 12		# End of letter_horizontal_line already goes forward 4 pixels
 
+# A - 
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 16
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 36
+
+# Row 2 
+# G -
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 28
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 12
+
+# M - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+
+# Space between M and E 
+addi $t0, $t0, 4
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 3
+# G -
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 24
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+
+# Space between M and E 
+addi $t0, $t0, 4
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 4
+# G -
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 3		# width of stroke
+jal letter_horizontal_line
+
+# Space between G and A 
+addi $t0, $t0, 4
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 36
+
+# Row 5
+# G -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 8
+
+# A - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between A and M 
+addi $t0, $t0, 4
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 6
+# G -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 8
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 7
+# G -
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between G and A 
+addi $t0, $t0, 4		# End of letter_horizontal_line already goes forward 4 pixels
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E -  
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+
+# Rest of the letter body
+#addi $t0, $t0, 108
+#sw $t1, 0($t0)			
+#addi $t0, $t0, 128
+#sw $t1, 0($t0)	
+#addi $t0, $t0, 128
+#sw $t1, 0($t0)
+#addi $t0, $t0, 8
+#addi $a0, $zero, 1		# Height of stroke
+#addi $a1, $zero, 3		# width of stroke
+#jal letter_horizontal_line
+#addi $t0, $t0, 108
+#sw $t1, 0($t0)
+#addi $t0, $t0, 16
+#sw $t1, 0($t0)
+#addi $t0, $t0, 112
+#sw $t1, 0($t0)
+#addi $t0, $t0, 16
+#sw $t1, 0($t0)
+
+# Bottom Horizontal stroke
+#addi $t0, $t0, 112
+#addi $a0, $zero, 1		# Height of stroke
+#addi $a1, $zero, 5		# width of stroke
+#jal letter_horizontal_line	
+
+# 
 j ask_restart				# After writing 'Game over' end the game 
 
 j skip_horizontal_line_func
