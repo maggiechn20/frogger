@@ -411,7 +411,7 @@ sw $t2, 0($t0)
 addi $t0, $t0, 8
 not_one_lives:
 
-# If you have zero lives remaining, load three black squars and jump to the terminate game function 
+# If you have zero lives remaining, load three black squares and jump to the terminate game function 
 beq $t9, 0, no_lives
 j not_no_lives
 no_lives:
@@ -567,6 +567,7 @@ j skip_W					# If not, skip the implementation and check if it is S
 	jal draw_frog
 
 
+
 skip_W:
 beq $t1, 0x73, respond_to_S			# If the keystroke was S, then go to respond_to_S
 j skip_S					# If not, skip the implementation and check if it is D
@@ -680,6 +681,8 @@ lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6
 beq $t8, $t6, crash_car2		# If the frog's position is on a car (yellow), it returns to the start 
 j skip_crash_car2		# If the pixel colors are not the same, then skip crash_car
 crash_car2:
+li $t4, 0x8b0000				# Colour for draw_frog when frog dies
+jal draw_frog
 jal crash_func
 skip_crash_car2:
 skip_assess_road2:		# Skips assess_raod (when y position of frog is not the same as the road2
@@ -699,6 +702,8 @@ lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6
 beq $t8, $t6, crash_car1		# If the frog's position is on a car (yellow), it returns to the start 
 j skip_crash_car1		# If the pixel colors are not the same, then skip crash_car
 crash_car1:
+li $t4, 0x8b0000				# Colour for draw_frog when frog dies
+jal draw_frog
 jal crash_func
 skip_crash_car1:
 skip_assess_road1:		# Skips assess_raod (when y position of frog is not the same as the road2
@@ -727,6 +732,8 @@ hit_edge2:			# Skip over all the movement stuff because you are at the edge of d
 
 j skip_crash_river2		# Skip implementation of crash function
 crash_river2:
+li $t4, 0x8b0000				# Colour for draw_frog when frog dies
+jal draw_frog
 jal crash_func
 skip_crash_river2: 		# Skips implementation of crash function (frog was on log)
 skip_assess_river2:		# Skip implementation of assess_river2 (frog was not on the same y position as this river)
@@ -756,6 +763,8 @@ hit_edge:
 
 j skip_crash_river1		# Skip implementation of crash function
 crash_river1:
+li $t4, 0x8b0000				# Colour for draw_frog when frog dies
+jal draw_frog
 jal crash_func
 skip_crash_river1:
 skip_assess_river1:		# Skips assess_river2 (when y position of frog is not the same as the road2)
@@ -764,6 +773,14 @@ j skip_crash_func		# Skip the crash_func implementation
 
 # FUNCTION: reset frog's position after dying AND delete a life
 crash_func:
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+la $t2, frog_y 			# $t2 has the same address as frog_y
+lw $t4, 0($t2)			# Fetch y position of frog
+sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
+sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
+add $t1, $t1, $t3		# Add x offset to $t1
+#add $t1, $t1, $t4		# Add y offset to $t1
 
 # Reset frog's position to start 
 addi $t9, $zero, 16 		# Reset x position
@@ -778,8 +795,11 @@ addi $t3, $zero, 1		# Assgin $t3 the value of 1
 sub $t3, $t2, $t3 		# Use another register to minus one from the above value 
 sw $t3, 0($t1) 			# Store this new value to lives_left 
 
-# Death/Respawn animation WORK ON THIS
-li $t4, 0x000000				# Lavender colour for frogs
+
+#li $v0, 32		# Sleep so that it pauses for a bt
+#li $a0, 1000
+#syscall
+
 
 # Generate sound tone  
 li $v0, 31
