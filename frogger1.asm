@@ -60,6 +60,7 @@ blue: 		.word 0x00008b
 red: 		.word 0x8B0000
 black: 		.word 0x000000
 white: 		.word 0xffffff
+pause_colour:	.word 0xD3D3D3
 
 game_x: 	.word 4
 game_y:		.word 4
@@ -344,15 +345,19 @@ add $t0, $t0, $t3		# Add y offset to $t0
 # Paint the frog 
 sw $t4, 0($t0) 		# draw the front left leg at the specified frog_x and frog_y coordinates. 
 sw $t4, 12($t0) 	# draw the front right leg
-addi $t0, $t0, 132 	# Second Row of frog (upper half of body)
+addi $t0, $t0, 128 	# Second Row of frog (upper half of body)
 sw $t4, 0($t0) 		# 
 sw $t4, 4($t0) 		#
-addi $t0, $t0, 128 	# Third Row of frog (lower half of body) 
+sw $t4, 8($t0) 		#
+sw $t4, 12($t0) 	#
+addi $t0, $t0, 132 	# Third Row of frog (lower half of body) 
 sw $t4, 0($t0) 		# 
 sw $t4, 4($t0) 		# 
-addi $t0, $t0, 124 	# Lower legs of frog 
+addi $t0, $t0, 124 	# Second Row of frog (upper half of body)
 sw $t4, 0($t0) 		# 
-sw $t4, 12($t0) 	# 
+sw $t4, 4($t0) 		#
+sw $t4, 8($t0) 		#
+sw $t4, 12($t0) 	#
 
 jr $ra
 
@@ -406,7 +411,7 @@ sw $t2, 0($t0)
 addi $t0, $t0, 8
 not_one_lives:
 
-# If you have zero lives remaining, load three black squars and jump to the terminate game function (FOR NOW WE WILL DO EXIT)
+# If you have zero lives remaining, load three black squars and jump to the terminate game function 
 beq $t9, 0, no_lives
 j not_no_lives
 no_lives:
@@ -416,6 +421,7 @@ sw $t2, 0($t0)
 addi $t0, $t0, 8
 sw $t2, 0($t0) 
 addi $t0, $t0, 8
+
 
 j game_over					# After all lives, jump to game_over
 not_no_lives:
@@ -596,6 +602,7 @@ j skip_P					# If not, skip the implementation
 	addi $t7, $zero, 0				# Assign $t7 the value of 0
 	sw $t7, 0($t9) 					# Assign the value of the memory address to zero to get ready for 
 	
+	# Pause the game 
 	pause_loop:
 	lw $t1, 0xffff0000
 	beq $t1, 1, check_p			# If there is a keystroke event (p is pressed again), break the loop and resume
@@ -604,8 +611,33 @@ j skip_P					# If not, skip the implementation
 	lw $t2, 0xffff0004
 	beq $t2, 0x70, break_pause
 	skip_check_p:
+	
+	# Draw a pause button 
+	lw $t0, displayAddress
+	lw $t1, pause_colour
+	addi $t0, $t0, 1920			# 15 rows from top (128 each row)
+	addi $t0, $t0, 64			# 16 pixels from the right (4 each shift)
+	
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	addi $a0, $zero, 1		# Height of stroke
+	addi $a1, $zero, 2		# width of stroke
+	jal letter_horizontal_line
+	addi $t0, $t0, 120
+	addi $a0, $zero, 1		# Height of stroke
+	addi $a1, $zero, 3		# width of stroke
+	jal letter_horizontal_line
+	addi $t0, $t0, 116
+	addi $a0, $zero, 1		# Height of stroke
+	addi $a1, $zero, 2		# width of stroke
+	jal letter_horizontal_line
+	addi $t0, $t0, 120
+	sw $t1, 0($t0)
 	j pause_loop
+	
+	
 	break_pause:	
+	
 	
 skip_P:
 
@@ -745,6 +777,9 @@ lw $t2, 0($t1) 			# Load the value of lives_left (0, 1, 2, 3)
 addi $t3, $zero, 1		# Assgin $t3 the value of 1 
 sub $t3, $t2, $t3 		# Use another register to minus one from the above value 
 sw $t3, 0($t1) 			# Store this new value to lives_left 
+
+# Death/Respawn animation
+li $t4, 0x000000				# Lavender colour for frogs
 
 
 
@@ -1343,7 +1378,7 @@ skip_ask_restart:
 
 ### Sleep ###
 li $v0, 32
-li $a0, 100
+li $a0, 200
 syscall
 
 
