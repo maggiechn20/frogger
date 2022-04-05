@@ -36,7 +36,7 @@
 
 .data
 displayAddress: .word 0x10008000
-keyboard: 	.word 0xffff0000		# Memory address of keyboard
+keyboard: 	.word 0xffff0000		# Memory address of keyboard		
 frog_x:		.word 16			# set frog position
 frog_y:		.word 28 			# to (16,28) (placing FL leg)
 vehicles_1: 	.space 512			# 4*32*4 bytes allocated for the first road
@@ -63,6 +63,8 @@ white: 		.word 0xffffff
 
 game_x: 	.word 4
 game_y:		.word 4
+over_x:		.word 4 
+over_y: 	.word 13
 
 lives_left: 	.word 3 			# How many lives the frog has left 
 lives_display: 	.space 24 			# 6*4 bytes allocated for lives display
@@ -357,6 +359,70 @@ jr $ra
 skip_function:
 
 
+
+### LIVES REMAINING ##### 
+
+lw $t1, red
+lw $t2, black
+
+# Set the display to start at 26 pixels from the left 
+lw $t0, displayAddress 	# $t0 stores the base address for display
+addi $t0, $t0, 232
+lw $t9, lives_left
+
+# If you have three lives remaining, load three req squares 
+beq $t9, 3, three_lives
+j not_three_lives
+three_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+not_three_lives:
+
+# If you have two lives remaining, load two red squares, and one black square
+beq $t9, 2, two_lives
+j not_two_lives
+two_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+not_two_lives:
+
+# If you have one lives remaining, load 1 red squares, and two black square
+beq $t9, 1, one_lives
+j not_one_lives
+one_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+not_one_lives:
+
+# If you have zero lives remaining, load three black squars and jump to the terminate game function (FOR NOW WE WILL DO EXIT)
+beq $t9, 0, no_lives
+j not_no_lives
+no_lives:
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+
+j game_over					# After all lives, jump to game_over
+not_no_lives:
+# draw function: draw out the lives remaining 
+# Set parameters for allocate_memory
+
+
 j skip_shift				# Skip the code that shifts the array
 
 ### Shift ###
@@ -523,6 +589,25 @@ j skip_D					# If not, skip the implementation
 	li $t4, 0x967bb8			# Lavender colour for frogs
 	jal draw_frog
 skip_D:
+beq $t1, 0x70, respond_to_P			# If the keystroke was P, then go to respond_to_P
+j skip_P					# If not, skip the implementation 
+	respond_to_P: 				# Pause screen
+	la $t9, keyboard				# Load the memory address of the keyboard
+	addi $t7, $zero, 0				# Assign $t7 the value of 0
+	sw $t7, 0($t9) 					# Assign the value of the memory address to zero to get ready for 
+	
+	pause_loop:
+	lw $t1, 0xffff0000
+	beq $t1, 1, check_p			# If there is a keystroke event (p is pressed again), break the loop and resume
+	j skip_check_p
+	check_p:
+	lw $t2, 0xffff0004
+	beq $t2, 0x70, break_pause
+	skip_check_p:
+	j pause_loop
+	break_pause:	
+	
+skip_P:
 
 skip_keyboard_input:
 
@@ -661,6 +746,8 @@ addi $t3, $zero, 1		# Assgin $t3 the value of 1
 sub $t3, $t2, $t3 		# Use another register to minus one from the above value 
 sw $t3, 0($t1) 			# Store this new value to lives_left 
 
+
+
 jr $ra
 skip_crash_func: 		# Skips the crash_func implementation
 
@@ -681,68 +768,6 @@ addi $t1, $zero, 1				# Store the value of 1 to $t1
 sw $t1, 0($t0) 					# Store 1 as the value at the memory address of target_reached 
 goal_not_reached:
 
-
-### LIVES REMAINING ##### 
-
-lw $t1, red
-lw $t2, black
-
-# Set the display to start at 26 pixels from the left 
-lw $t0, displayAddress 	# $t0 stores the base address for display
-addi $t0, $t0, 232
-lw $t9, lives_left
-
-# If you have three lives remaining, load three req squares 
-beq $t9, 3, three_lives
-j not_three_lives
-three_lives:
-sw $t1, 0($t0) 
-addi $t0, $t0, 8
-sw $t1, 0($t0) 
-addi $t0, $t0, 8
-sw $t1, 0($t0) 
-addi $t0, $t0, 8
-not_three_lives:
-
-# If you have two lives remaining, load two red squares, and one black square
-beq $t9, 2, two_lives
-j not_two_lives
-two_lives:
-sw $t1, 0($t0) 
-addi $t0, $t0, 8
-sw $t1, 0($t0) 
-addi $t0, $t0, 8
-sw $t2, 0($t0) 
-addi $t0, $t0, 8
-not_two_lives:
-
-# If you have one lives remaining, load 1 red squares, and two black square
-beq $t9, 1, one_lives
-j not_one_lives
-one_lives:
-sw $t1, 0($t0) 
-addi $t0, $t0, 8
-sw $t2, 0($t0) 
-addi $t0, $t0, 8
-sw $t2, 0($t0) 
-addi $t0, $t0, 8
-not_one_lives:
-
-# If you have zero lives remaining, load three black squars and jump to the terminate game function (FOR NOW WE WILL DO EXIT)
-beq $t9, 0, no_lives
-j not_no_lives
-no_lives:
-sw $t2, 0($t0) 
-addi $t0, $t0, 8
-sw $t2, 0($t0) 
-addi $t0, $t0, 8
-sw $t2, 0($t0) 
-addi $t0, $t0, 8
-
-j game_over					# After all lives, jump to game_over
-not_no_lives:
-# draw function: draw out the lives remaining 
-# Set parameters for allocate_memory
 
 #### GAME OVER SCREEN #### 
 
@@ -779,22 +804,20 @@ draw_black_screen:
 
 done_draw_black:		# When $t1 == height ($a0), the drawing is done.
 
-
-
-
 # ---------
 lw $t0, displayAddress
 lw $t1, white			# Get the white colour and store to $t1
+
+# Write the word game
 lw $t2, game_x			# Get the x position of the word game
 lw $t3, game_y			# Get the y position fo the word game 
 sll $t2, $t2, 2			# Time game_x by 4
 sll $t3, $t3, 7			# Time game_y by 128
-
-# Row 1 
-
-# G -
 add $t0, $t0, $t2		# Add the x position
 add $t0, $t0, $t3		# Add the y position
+
+# Row 1 
+# G -
 addi $a0, $zero, 1		# Height of stroke
 addi $a1, $zero, 5		# width of stroke
 jal letter_horizontal_line
@@ -1019,36 +1042,244 @@ addi $a0, $zero, 1		# Height of stroke
 addi $a1, $zero, 5		# width of stroke
 jal letter_horizontal_line
 
+# Take to the end of the of display
+addi $t0, $t0, 36
+
+
+
+# Write the word over
+lw $t0, displayAddress
+lw $t2, over_x			# Get the x position of the word game
+lw $t3, over_y			# Get the y position fo the word game 
+sll $t2, $t2, 2			# Time game_x by 4
+sll $t3, $t3, 7			# Time game_y by 128 
+add $t0, $t0, $t2		# Add the x position
+add $t0, $t0, $t3		# Add the y position
+
+
+# Row 1 
+# O -
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 3		# width of stroke
+jal letter_horizontal_line
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between E and R 
+addi $t0, $t0, 4
+
+# R - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
 # Set up for the next row 
-addi $t0, $t0, 56
+addi $t0, $t0, 36
+
+# Row 2
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 40
+
+# Row 3
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 40
+
+# Row 4
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between E and R 
+addi $t0, $t0, 4
+
+# R - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 36
+
+# Row 5
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 48
 
 
-# Rest of the letter body
-#addi $t0, $t0, 108
-#sw $t1, 0($t0)			
-#addi $t0, $t0, 128
-#sw $t1, 0($t0)	
-#addi $t0, $t0, 128
-#sw $t1, 0($t0)
-#addi $t0, $t0, 8
-#addi $a0, $zero, 1		# Height of stroke
-#addi $a1, $zero, 3		# width of stroke
-#jal letter_horizontal_line
-#addi $t0, $t0, 108
-#sw $t1, 0($t0)
-#addi $t0, $t0, 16
-#sw $t1, 0($t0)
-#addi $t0, $t0, 112
-#sw $t1, 0($t0)
-#addi $t0, $t0, 16
-#sw $t1, 0($t0)
+# Row 6
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
 
-# Bottom Horizontal stroke
-#addi $t0, $t0, 112
-#addi $a0, $zero, 1		# Height of stroke
-#addi $a1, $zero, 5		# width of stroke
-#jal letter_horizontal_line	
+# Space between O and V
+addi $t0, $t0, 12		# End of letter_horizontal_line already goes forward 4 pixels
 
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 12
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 12
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 44
+
+# Row 7
+# O -
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 3		# width of stroke
+jal letter_horizontal_line
+
+# Space between O and V
+addi $t0, $t0, 16		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 16
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between E and R 
+addi $t0, $t0, 4
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 40
 # 
 j ask_restart				# After writing 'Game over' end the game 
 
@@ -1112,22 +1343,14 @@ skip_ask_restart:
 
 ### Sleep ###
 li $v0, 32
-li $a0, 300
+li $a0, 100
 syscall
 
 
 j repaint		# Loop up to the very top again for repainting
-
-
-
-
-# X position of word game 
-
-
-# Y position of word game - 8? 
-# If y keystroke, then restart from the very beginning. 
-# If no, go to a separate screen that indicates game ended 
-				
+					
+##### EXIT ######
+						
 Exit:
 # ---
 li $v0, 10 # terminate the program gracefully
