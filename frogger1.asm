@@ -67,6 +67,18 @@ game_y:		.word 4
 over_x:		.word 4 
 over_y: 	.word 13
 
+facing_left:	.word 0
+facing_forward: .word 1
+facing_right:   .word 0
+facing_back:  	.word 0
+
+river2_speed: 		.word 0
+river2_speed_set: 	.word 2
+road1_speed: 		.word 0
+road1_speed_set: 	.word 6
+road2_speed: 		.word 0
+road2_speed_set: 	.word 3
+
 lives_left: 	.word 3 			# How many lives the frog has left 
 lives_display: 	.space 24 			# 6*4 bytes allocated for lives display
 
@@ -126,7 +138,6 @@ li $t8, 0x964b00	# $t8 stores the brown colour for logs
 la $t9, river_2		# $t9 holds address of array river_2 
 
 jal allocate_memory
-
 
 j skip_allocate_memory_func
 # FUNCTION: Store all the pixels in the .space array
@@ -273,27 +284,99 @@ jr $ra
 skip_draw_safe_space_function:	# Skip the function
 
 ###### DRAW RIVERS AND LOGS ####### 
-
+# River 1 
 la $t9, river_1		# $t9 holds address of array river_1 
 li $a1, 1024		# $a1 determines where road1 should start(each row is 128) 
 jal paint_pixels
 jal shift_array_left
 
+
+# Road 1 
 la $t9, vehicles_1	# $t9 holds address of array vehicles_1 
 li $a1, 2560		# $a1 determines where road1 should start(each row is 128) 
 jal paint_pixels
+
+lw $t1, road1_speed 	# Load the value/word into $t1
+la $t2, road1_speed  	# Load the address
+lw $t3, road1_speed_set # This is the condition for the loop
+beq $t1, $t3, road1_speed_loop
+
+j skip_road1_loop
+road1_speed_loop:
+
 jal shift_array_left
 
+addi $t3, $zero, 0
+la $t2, road1_speed  	# Load the address
+sw $t3, 0($t2) 		# Reset it back to zero 
 
+j road1_loop_exit
+
+skip_road1_loop:
+lw $t1, road1_speed 	# Load the value/word into $t1
+addi $t1, $t1, 1	# Increment 
+sw $t1, 0($t2)		# Store this value to river2_s
+
+road1_loop_exit:
+
+
+# Road 2 
 la $t9, vehicles_2	# $t9 holds address of array vehicles_1 
 li $a1, 3072		# $a1 determines where road1 should start(each row is 128) 
 jal paint_pixels
+
+lw $t1, road2_speed 	# Load the value/word into $t1
+la $t2, road2_speed  	# Load the address
+lw $t3, road2_speed_set # This is the condition for the loop
+beq $t1, $t3, road2_speed_loop
+
+j skip_road2_loop
+road2_speed_loop:
+
 jal shift_array_right
 
-la $t9, river_2	# $t9 holds address of array vehicles_1 
+addi $t3, $zero, 0
+la $t2, road2_speed  	# Load the address
+sw $t3, 0($t2) 		# Reset it back to zero 
+
+j road2_loop_exit
+
+skip_road2_loop:
+lw $t1, road2_speed 	# Load the value/word into $t1
+addi $t1, $t1, 1	# Increment 
+sw $t1, 0($t2)		# Store this value to river2_s
+
+road2_loop_exit:
+
+# River 2
+
+la $t9, river_2		# $t9 holds address of array vehicles_1 
 li $a1, 1536		# $a1 determines where road1 should start(each row is 128) 
 jal paint_pixels
+
+lw $t1, river2_speed 	# Load the value/word into $t1
+la $t2, river2_speed  	# Load the address
+lw $t3, river2_speed_set # This is the condition for the loop
+beq $t1, $t3, river2_speed_loop
+
+j skip_river2_loop
+river2_speed_loop:
+
 jal shift_array_right
+
+addi $t3, $zero, 0
+la $t2, river2_speed  	# Load the address
+sw $t3, 0($t2) 		# Reset it back to zero 
+
+j river2_loop_exit
+
+skip_river2_loop:
+lw $t1, river2_speed 	# Load the value/word into $t1
+addi $t1, $t1, 1	# Increment 
+sw $t1, 0($t2)		# Store this value to river2_s
+
+river2_loop_exit:
+
 
 j skip_memory_and_pixels_functions	# Skip the functions below
 
@@ -342,7 +425,19 @@ sll $t3, $t3, 7			# Multiply $t3 (frog y position) by 128
 add $t0, $t0, $t2		# Add x offset to $t0
 add $t0, $t0, $t3		# Add y offset to $t0
 
-# Paint the frog 
+# Orientation of frog 
+lw $s0, facing_left
+lw $s1, facing_forward
+lw $s2, facing_right
+lw $s3, facing_back
+
+
+
+# WHEN FROG MOVES FORWARD ---------
+beq $s1, 1, facing_forward_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_forward_paint		# If not, then skip the implementation
+facing_forward_paint:
+
 sw $t4, 0($t0) 		# draw the front left leg at the specified frog_x and frog_y coordinates. 
 sw $t4, 12($t0) 	# draw the front right leg
 addi $t0, $t0, 128 	# Second Row of frog (upper half of body)
@@ -358,6 +453,97 @@ sw $t4, 0($t0) 		#
 sw $t4, 4($t0) 		#
 sw $t4, 8($t0) 		#
 sw $t4, 12($t0) 	#
+
+skip_facing_forward_paint:
+
+# WHEN FROG MOVES LEFT -------
+beq $s0, 1, facing_left_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_left_paint		# If not, then skip the implementation
+facing_left_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 
+sw $t4, 4($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 4($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 12($t0) 
+
+skip_facing_left_paint:
+
+
+# WHEN FROG MOVES RIGHT -------
+beq $s2, 1, facing_right_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_right_paint		# If not, then skip the implementation
+facing_right_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+skip_facing_right_paint:
+
+
+# WHEN FROG MOVES RIGHT -------
+beq $s3, 1, facing_back_paint		# If facing_left is true, paint a left facing frog 
+j skip_facing_back_paint		# If not, then skip the implementation
+facing_back_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+sw $t4, 12($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 12($t0) 
+
+skip_facing_back_paint:
 
 jr $ra
 
@@ -543,6 +729,17 @@ beq $t1, 0x61, respond_to_A			# If the keystroke was A, then go to respond_to_A
 j skip_A					# If not, skip the implementation and check if it is W 
 	respond_to_A: 				# Move frog left
 	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t7, 0($t9) 				# Set it to 1.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 0.
+	
 	# Draw in new frog 
 	la $t2, frog_x 				# $t1 has the same address as frog_x
 	lw $t3, 0($t2)				# Fetch x position of frog
@@ -556,6 +753,17 @@ skip_A:
 beq $t1, 0x77, respond_to_W			# If the keystroke was W, then go to respond_to_W
 j skip_W					# If not, skip the implementation and check if it is S 
 	respond_to_W: 				# Move frog forward
+	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t7, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 1.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 0.
 	
 	# Draw in new frog 
 	la $t2, frog_y 				# $t2 has the same address as frog_y
@@ -573,6 +781,17 @@ beq $t1, 0x73, respond_to_S			# If the keystroke was S, then go to respond_to_S
 j skip_S					# If not, skip the implementation and check if it is D
 	respond_to_S: 				# Move frog back
 	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_right 			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t7, 0($t9) 				# Set it to 1.
+	
 	# Draw in new frog 
 	la $t2, frog_y 				# $t2 has the same address as frog_y
 	lw $t3, 0($t2)				# Fetch y position of frog
@@ -587,6 +806,17 @@ beq $t1, 0x64, respond_to_D			# If the keystroke was D, then go to respond_to_D
 j skip_D					# If not, skip the implementation 
 	respond_to_D: 				# Move frog right
 
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t7, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 1.
+	
 	# Draw in new frog 
 	la $t2, frog_x 				# $t2 has the same address as frog_x
 	lw $t3, 0($t2)				# Fetch y position of frog
@@ -720,14 +950,30 @@ add $t5, $t5, $t1		# Add frog's x position offset to $t5
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
 
 beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), it returns to the start 
+
+
+# FUNCTION: move_with_log
+
 move_with_log:			# If the pixel colors are not the same, then move with the log.
 la $t2, frog_x 			# $t2 has the same address as frog_x
 lw $t3, 0($t2)			# Fetch x position of frog
 beq $t3, 28, hit_edge2		# Do not move if you are already at the end of display
+
+lw $t6, river2_speed 		# Load the value/word into $t1
+la $t7, river2_speed  		# Load the address
+lw $t8, river2_speed_set 	# This is the condition for the loop
+
+beq $t6, $t8, move_slow_loop
+
+j skip_move_slow_loop
+
+move_slow_loop:
 addi $t3, $t3, 1		# Move the frog to the right 
 sw $t3, 0($t2)			# Store the new frog x position to frog_x
 li $t4, 0x967bb8		# Lavender colour for frogs
 jal draw_frog			# Call the draw frog function
+
+skip_move_slow_loop:
 hit_edge2:			# Skip over all the movement stuff because you are at the edge of display
 
 j skip_crash_river2		# Skip implementation of crash function
@@ -788,6 +1034,18 @@ sw $t9, 0($t2)			# Store this reset position to frog_x
 addi $t9, $zero, 28 		# Reset y position
 sw $t9, 0($t2)			# Store this reset position to frog_y
 
+addi $t8, $zero, 0
+addi $t7, $zero, 1
+la $t9, facing_forward			# Get the (1/0) value of facing_forward
+sw $t7, 0($t9) 				# Set it to 0.
+la $t9, facing_left			# Get the (1/0) value of facing_left
+sw $t8, 0($t9) 				# Set it to 1.
+la $t9, facing_right			# Get the (1/0) value of facing_right
+sw $t8, 0($t9) 				# Set it to 0.
+la $t9, facing_back			# Get the (1/0) value of facing_back
+sw $t8, 0($t9) 				# Set it to 0.
+
+
 # Delete a life 
 la $t1, lives_left		# Load the address of lives_left
 lw $t2, 0($t1) 			# Load the value of lives_left (0, 1, 2, 3)
@@ -796,20 +1054,17 @@ sub $t3, $t2, $t3 		# Use another register to minus one from the above value
 sw $t3, 0($t1) 			# Store this new value to lives_left 
 
 
-#li $v0, 32		# Sleep so that it pauses for a bt
-#li $a0, 1000
-#syscall
-
-
 # Generate sound tone  
 li $v0, 31
 li $a0, 39
-li $a1, 200
+li $a1, 500
 li $a2, 65
 li $a3, 110
 syscall
 
-
+li $v0, 32		# Sleep so that it pauses for a bt
+li $a0, 500
+syscall
 
 jr $ra
 skip_crash_func: 		# Skips the crash_func implementation
@@ -839,7 +1094,6 @@ la $t0, target_reached				# Memory address of target_reached
 addi $t1, $zero, 1				# Store the value of 1 to $t1 
 sw $t1, 0($t0) 					# Store 1 as the value at the memory address of target_reached 
 
-j Exit						# FOR DEBUGGING: Jump to exit first but we want it to jup to winning state
 goal_not_reached:
 
 
@@ -1417,7 +1671,7 @@ skip_ask_restart:
 
 ### Sleep ###
 li $v0, 32
-li $a0, 200
+li $a0, 50
 syscall
 
 
