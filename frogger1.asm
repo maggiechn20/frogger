@@ -43,7 +43,7 @@ vehicles_1: 	.space 512			# 4*32*4 bytes allocated for the first road
 vehicles_2:     .space 512			# 4*32*4 bytes allocated for the second road
 river_1: 	.space 512			# 4*32*4 bytes allocated for the first river
 river_2:     	.space 512			# 4*32*4 bytes allocated for the second river
-target_reached: .word 0				# 1 when the frog reaches the goal, 0 if not.
+
 car1_x:		.word 0 
 car2_x: 	.word 16
 car3_x:		.word 4
@@ -61,6 +61,12 @@ red: 		.word 0x8B0000
 black: 		.word 0x000000
 white: 		.word 0xffffff
 pause_colour:	.word 0xD3D3D3
+goal_empty:     .word 0xf8C8DC
+goal_filled: 	.word 0xcd5e77
+
+goal_1:		.word 0
+goal_2:		.word 0
+goal_3:		.word 0
 
 game_x: 	.word 4
 game_y:		.word 4
@@ -213,6 +219,7 @@ jr $ra
 
 skip_allocate_memory_func:
 
+
 ############################
 ######### MAIN LOOP ########
 ############################
@@ -284,6 +291,143 @@ draw_safe_space:
 jr $ra
 
 skip_draw_safe_space_function:	# Skip the function
+
+###### DRAW GOALS ###### 
+
+lw $s0, goal_1
+lw $s1, goal_2
+lw $s2, goal_3
+
+
+# Goal 1 
+lw $t0, displayAddress 			# $t0 stores the base address for display
+beq $s0, 0, empty_colour1		# Check if goal is filled or not
+lw $t3, goal_filled 			# $t3 stores the pink goal filled colour
+j skip_other1				# Skip implementation below 
+empty_colour1:
+lw $t3, goal_empty 	# $t3 stores the pink goal empty colour
+skip_other1:
+addi $t0, $t0, 8	# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 2	# set height = 6
+addi $a1, $zero, 3	# set width = 10
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+
+# Goal 2 
+lw $t0, displayAddress 			# $t0 stores the base address for display
+beq $s1, 0, empty_colour2		# Check if goal is filled or not
+lw $t3, goal_filled 			# $t3 stores the pink goal filled colour
+j skip_other2				# Skip implementation below 
+empty_colour2:
+lw $t3, goal_empty 	# $t3 stores the pink goal empty colour
+skip_other2:
+addi $t0, $t0, 40	# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 2	# set height = 6
+addi $a1, $zero, 3	# set width = 10
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+
+
+# Goal 3 
+lw $t0, displayAddress 			# $t0 stores the base address for display
+beq $s2, 0, empty_colour3		# Check if goal is filled or not
+lw $t3, goal_filled 			# $t3 stores the pink goal filled colour
+j skip_other3				# Skip implementation below 
+empty_colour3:
+lw $t3, goal_empty 	# $t3 stores the pink goal empty colour
+skip_other3:
+addi $t0, $t0, 72	# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 2	# set height = 6
+addi $a1, $zero, 3	# set width = 10
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+
+###### FILLING IN GOALS #######
+# Add frog_x and frog_y. It it is within some range, change goal_1... to 1 
+
+# Set some values 
+lw $t0, displayAddress 		# $t0 stores the base address for display
+
+# Determine the position of the frog 
+la $t1, frog_x 			# $t1 has the same address as frog_x
+lw $t2, 0($t1)			# Fetch x position of frog
+la $t1, frog_y 			# $t2 has the same address as frog_y
+lw $t3, 0($t1)			# Fetch y position of frog
+sll $t2, $t2, 2			# Multiply $t2 (frog x position) by 4
+sll $t3, $t3, 7			# Multiply $t3 (frog y position) by 128
+add $t0, $t0, $t2		# Add x offset to $t0
+add $t0, $t0, $t3		# Add y offset to $t0
+
+# Goal 1 
+lw $t9, displayAddress 		# $t0 stores the base address for display
+addi $t6, $t9, 8
+beq $t0, $t6, fill_goal1
+addi $t6, $t6, 4
+beq $t0, $t6, fill_goal1
+addi $t6, $t6, 4
+beq $t0, $t6, fill_goal1
+j skip_fill_goal1
+fill_goal1:
+la $t4, goal_1
+addi $t5, $zero, 1
+sw $t5, 0($t4)
+
+jal after_goal_filled
+skip_fill_goal1:
+
+
+j skip_after_goal
+
+after_goal_filled:
+li $v0, 32		# Sleep so that it pauses for a bt
+li $a0, 500
+syscall
+
+la $t2, frog_x
+la $t3, frog_y
+
+# Reset frog's position to start 
+addi $t9, $zero, 16 		# Reset x position
+sw $t9, 0($t2)			# Store this reset position to frog_x
+addi $t9, $zero, 28 		# Reset y position
+sw $t9, 0($t3)			# Store this reset position to frog_y
+
+addi $t8, $zero, 0
+addi $t7, $zero, 1
+la $t9, facing_forward			# Get the (1/0) value of facing_forward
+sw $t7, 0($t9) 				# Set it to 0.
+la $t9, facing_left			# Get the (1/0) value of facing_left
+sw $t8, 0($t9) 				# Set it to 1.
+la $t9, facing_right			# Get the (1/0) value of facing_right
+sw $t8, 0($t9) 				# Set it to 0.
+la $t9, facing_back			# Get the (1/0) value of facing_back
+sw $t8, 0($t9) 				# Set it to 0.
+
+jr $ra
+
+skip_after_goal:
+
 
 ###### DRAW RIVERS AND LOGS ####### 
 # River 1 
@@ -1097,7 +1241,7 @@ skip_crash_func: 		# Skips the crash_func implementation
 
 
 
-### Reaches end goal ###
+### FROG REACHES GOAL ###
 # Check the frog position
 la $t2, frog_y 					# $t2 has the same address as frog_y
 lw $t4, 0($t2)					# Fetch y position of frog
@@ -1115,10 +1259,6 @@ li $a1, 100
 li $a2, 16
 li $a3, 110
 syscall
-
-la $t0, target_reached				# Memory address of target_reached
-addi $t1, $zero, 1				# Store the value of 1 to $t1 
-sw $t1, 0($t0) 					# Store 1 as the value at the memory address of target_reached 
 
 goal_not_reached:
 
