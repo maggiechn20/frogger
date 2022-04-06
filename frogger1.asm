@@ -52,6 +52,7 @@ log1_x:		.word 0
 log2_x:		.word 16
 log3_x:		.word 4
 log4_x:		.word 20
+
 green:		.word 0x4dad53
 lavendar:	.word 0x967bb8
 grey:		.word 0x808080 	
@@ -61,12 +62,18 @@ red: 		.word 0x8B0000
 black: 		.word 0x000000
 white: 		.word 0xffffff
 pause_colour:	.word 0xD3D3D3
+purple_win: 	.word 0x6a0dad
+
 goal_empty:     .word 0xf8C8DC
 goal_filled: 	.word 0xcd5e77
+
+sound_ind:	.word 1
+
 
 goal_1:		.word 0
 goal_2:		.word 0
 goal_3:		.word 0
+goals_filled: 	.word 0 
 
 game_x: 	.word 4
 game_y:		.word 4
@@ -389,6 +396,16 @@ addi $t6, $t6, 4
 beq $t0, $t6, fill_goal1
 j skip_fill_goal1
 fill_goal1:
+la $s0, goals_filled  		# Determine how many goals are filled
+lw $s1, goals_filled 
+addi $s1, $s1, 1
+sw $s1, 0($s0)
+beq $s1, 3, win_game1
+j skip_win_game1
+win_game1:
+lw $t9, purple_win
+j game_over 				# FOR DEBUGGING - there should be a proper win state
+skip_win_game1:
 la $t4, goal_1
 addi $t5, $zero, 1
 sw $t5, 0($t4)
@@ -397,6 +414,59 @@ jal after_goal_filled
 skip_fill_goal1:
 
 
+# Goal 2 
+lw $t9, displayAddress 		# $t0 stores the base address for display
+addi $t6, $t9, 40
+beq $t0, $t6, fill_goal2
+addi $t6, $t6, 4
+beq $t0, $t6, fill_goal2
+addi $t6, $t6, 4
+beq $t0, $t6, fill_goal2
+j skip_fill_goal2
+fill_goal2:
+la $s0, goals_filled  		# Determine how many goals are filled
+lw $s1, goals_filled 
+addi $s1, $s1, 1
+sw $s1, 0($s0)
+beq $s1, 3, win_game2
+j skip_win_game2
+win_game2:
+lw $t9, purple_win
+j game_over  				# FOR DEBUGGING - there should be a proper win state
+skip_win_game2:
+
+la $t4, goal_2
+addi $t5, $zero, 1
+sw $t5, 0($t4)
+jal after_goal_filled
+skip_fill_goal2:
+
+# Goal 3
+lw $t9, displayAddress 		# $t0 stores the base address for display
+addi $t6, $t9, 72
+beq $t0, $t6, fill_goal3
+addi $t6, $t6, 4
+beq $t0, $t6, fill_goal3
+addi $t6, $t6, 4
+beq $t0, $t6, fill_goal3
+j skip_fill_goal3
+fill_goal3:
+la $s0, goals_filled  		# Determine how many goals are filled
+lw $s1, goals_filled 
+addi $s1, $s1, 1
+sw $s1, 0($s0)
+beq $s1, 3, win_game3
+j skip_win_game3
+win_game3:
+lw $t9, purple_win
+j game_over 				# FOR DEBUGGING - there should be a proper win state
+skip_win_game3:
+
+la $t4, goal_3
+addi $t5, $zero, 1
+sw $t5, 0($t4)
+jal after_goal_filled
+skip_fill_goal3:
 j skip_after_goal
 
 after_goal_filled:
@@ -754,7 +824,7 @@ addi $t0, $t0, 8
 sw $t2, 0($t0) 
 addi $t0, $t0, 8
 
-
+lw $t9, black
 j game_over					# After all lives, jump to game_over
 not_no_lives:
 # draw function: draw out the lives remaining 
@@ -1039,7 +1109,8 @@ sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
 sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
 add $t1, $t1, $t3		# Add x offset to $t1
 addi $t1, $t1, 4		# To ensure sensitivity is not at the edges, but rather when frog is ON something
-addi $s2, $zero, 8		# Gets the width of the frog (3*8 because you are looking at hte 4th pixel)
+addi $s2, $zero, 4		# Gets the width of the frog (3*8 because you are looking at hte 4th pixel) for left moving
+addi $s3, $zero, 8		# Gets the width of the frog (3*8 because you are looking at hte 4th pixel) for right moving
 
 lw $t7, blue
 lw $t8, yellow
@@ -1248,20 +1319,28 @@ lw $t4, 0($t2)					# Fetch y position of frog
 sll $t4, $t4, 7					# Multiply $t4 (frog y position) by 128
 addi $s1, $zero, 512				# Y position of the end goal (MAYBE CHANGE TO INCLUDE BOTH Y POSITIONS?
 ble $t4, $s1, goal_reached			# If the frog's y position is smaller than the y position  of the end goal rectangle, go change target reached
+
 # If the frog is at the end goal, then continue to change the memory address
 j goal_not_reached
 goal_reached:
 
-# Make sound
+lw $s2, sound_ind 
+beq $s2, 1, make_sound				# If counter is 1, make sound and then change value to 0. If not, skip 
+j skip_make_sound
+make_sound:
 li $v0, 33
-li $a0, 69
+li $a0, 60
 li $a1, 100
-li $a2, 16
+li $a2, 88
 li $a3, 110
 syscall
 
-goal_not_reached:
 
+la $s3, sound_ind
+addi $s4, $zero, 0
+sw $s4, 0($s3)
+skip_make_sound:
+goal_not_reached:
 
 #### GAME OVER SCREEN #### 
 
@@ -1270,11 +1349,23 @@ j skip_game_over		# Skip over implementation of game_over
 
 game_over:
 
+# Reset goal settings 
+add $t8, $zero, $zero
+la $t7, goal_1
+sw $t8, 0($t7)
+la $t7, goal_2
+sw $t8, 0($t7)
+la $t7, goal_3
+sw $t8, 0($t7)
+la $t7, goal_filled
+sw $t8, 0($t7)
+
 # Set some values 
 lw $t0, displayAddress
 addi $a0, $zero, 32	# set height = 6
 addi $a1, $zero, 32	# set width = 10
-lw $t9, black 		# Get the colour black
+#lw $t9, black 		# Get the colour black SET AS PARAMETER
+
 
 # Paint screen black 
 draw_black_screen:
