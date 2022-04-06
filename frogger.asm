@@ -12,25 +12,32 @@
 # - Display height in pixels: 256
 # - Base Address for Display: 0x10008000 ($gp)
 #
-# Which milestone is reached in this submission? 1
+# Which milestone is reached in this submission? 5
 # (See the assignment handout for descriptions of the milestones)
 # - Milestone 1/2/3/4/5 (choose the one the applies)
 #
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
-# 2. (fill in the feature, if any)
-# 3. (fill in the feature, if any)
-# ... (add more if necessary)
+# 1. Display the number of lives remaining
+# 2. After final player death, display game over/retry screen. Restart the game if the 'y' is pressed, terminate game if 'n' is pressed
+# 3. Objects in different rows move at different speeds
+# 4. Respawn animation each time frog is lost (it is coloured red)
+# 5. Make the frog point in the direction that it is travelling 
+# 6. Added sound effects for collisions and reach the destination "grass"
+# 7. Pause and display a play button on the screen when 'p' is pressed. 
 #
 # Any additional information that the TA needs to know:
-# - (write here, if any)
 #
+# Sometimes when the frog reaches the end, it seems that it won't fit into any of the goals - I made it this way s that you have 
+# to go back to the logs on the river to move until the frog is in the right position and fits in. 
+#
+# The win state is the game over screen with a purple background 
 #####################################################################
 
 
 .data
 displayAddress: .word 0x10008000
+keyboard: 	.word 0xffff0000		# Memory address of keyboard		
 frog_x:		.word 16			# set frog position
 frog_y:		.word 28 			# to (16,28) (placing FL leg)
 vehicles_1: 	.space 512			# 4*32*4 bytes allocated for the first road
@@ -38,269 +45,2163 @@ vehicles_2:     .space 512			# 4*32*4 bytes allocated for the second road
 river_1: 	.space 512			# 4*32*4 bytes allocated for the first river
 river_2:     	.space 512			# 4*32*4 bytes allocated for the second river
 
+car1_x:		.word 0 
+car2_x: 	.word 16
+car3_x:		.word 4
+car4_x:		.word 20
+log1_x:		.word 0
+log2_x:		.word 16
+log3_x:		.word 4
+log4_x:		.word 20
+
+green:		.word 0x4dad53
+lavendar:	.word 0x967bb8
+grey:		.word 0x808080 	
+yellow:		.word 0xffff00
+blue: 		.word 0x00008b
+red: 		.word 0x8B0000
+black: 		.word 0x000000
+white: 		.word 0xffffff
+pause_colour:	.word 0xD3D3D3
+purple_win: 	.word 0x6a0dad
+
+goal_empty:     .word 0xf8C8DC
+goal_pink_filled: 	.word 0xcd5e77
+
+sound_ind:	.word 1
+
+
+goal_1:		.word 0
+goal_2:		.word 0
+goal_3:		.word 0
+goals_filled: 	.word 0 
+
+game_x: 	.word 4
+game_y:		.word 4
+over_x:		.word 4 
+over_y: 	.word 13
+yes_x:		.word 10
+yes_y:		.word 21
+
+facing_left:	.word 0
+facing_forward: .word 1
+facing_right:   .word 0
+facing_back:  	.word 0
+
+river2_speed: 		.word 0
+river2_speed_set: 	.word 3
+road1_speed: 		.word 0
+road1_speed_set: 	.word 6
+road2_speed: 		.word 0
+road2_speed_set: 	.word 2
+
+lives_left: 	.word 3 			# How many lives the frog has left 
+lives_display: 	.space 24 			# 6*4 bytes allocated for lives display
 
 .text
 
-#
-# Road and Vehicles -----------
-#
+play:						# When game ends, keystroke Y jumps here to play again
 
-# FIRST ROW OF ROAD
+###############################################################
+##### INITIAL ROAD PAINT ######################################
+###############################################################
 
-# Allocate the colours into the .space variable
+# Road 1 -----
+# Set parameters for allocate_memory
+addi $a2, $zero, 0 		# set the x location of the first car 
+addi $a3, $zero, 16 		# set the x location of the second car
 
-lw $t0, displayAddress	# $t0 stores the base address for display
-li $t5, 0x808080 	# $t5 stores the grey colour used for the road
-li $t6, 0xffff00	# t6 stores the yellow colour for cars
+
+li $t7, 0x808080 		# $t7 stores the grey colour used for the road 
+li $t8, 0xffff00		# $t8 stores the yellow colour for cars 
+
+la $t9, vehicles_1		# $t9 holds address of array vehicles_1 
+
+jal allocate_memory		# Draw in the cars for road 1
 
 
-la $t9, vehicles_1	# $t9 holds address of array vehicles
-add $t4, $zero, $zero 	# $t4 holds i = 0
-add $t1, $zero, 128 	# $t1 holds 128
-addi $a0, $a0, 0 	# set the location of the first vehicle ($a0 < $a1)
-addi $a1, $a1, 16 	# set the location of the second vehicle
-addi $a2, $a2, 2560 	# set the location of the road/river
+# Road 2 -----
+# Set parameters for allocate_memory
+addi $a2, $zero, 4 		# set the x location of the first car 
+addi $a3, $zero, 20 		# set the x location of the second car
 
-jal colour_obstacle_line
+li $t7, 0x808080 		# $t7 stores the grey colour used for the road 
+li $t8, 0xffff00		# $t8 stores the yellow colour for cars 
 
-j done_first_row
+la $t9, vehicles_2		# $t9 holds address of array vehicles_2
 
-# FUNCTION colour_obstacle_line -> $a0, $a1, $a2 and $t9 are the 'parameters'
+jal allocate_memory		# Draw in the cars for road 2
 
-colour_obstacle_line: 
+# River 1 -----
+# Set parameters for allocate_memory
+addi $a2, $zero, 0 		# set the x location of the first log 
+addi $a3, $zero, 16 		# set the x location of the second log
 
-space_array_loop:
-bge $t4, $t1, finish_road  # exit loop when i >= 128 
-li $t8, 0		   # reset $t8 to zero for each loop. This will count our remainder
+li $t7, 0x00008b 		# $t7 stores the blue colour used for the river 
+li $t8, 0x964b00		# $t8 stores the brown colour for logs 
 
-sll $t2, $t4, 2 	   # $t2 = $t0 * 4 = i * 4 = offset 
-add $t3, $t9, $t2 	   # $t3 = addr(A) + i * 4 = addr(A[i])
-sw $t5, 0($t3) 		   # colour it grey (A[i] = 0x808080)
+la $t9, river_1			# $t9 holds address of array river_1 
 
-add $t8, $t4, 0		   # Assign the value of $t4 to $t8
-addi $t2, $zero, 32 	   # assign $t2 to be 32
-div $t8, $t2		   # Divide $t8 (value of $t4, the index) by 32
-mfhi $t7 		   # Store the remainder of the division to $t7 
+jal allocate_memory		# Draw in the logs for river 1 
 
-# Colour in the vehicle pixels 
 
-bge $t7, $a0, double_check_range_1	# if $t7 >= $a0, check if the value is within $a0 + 8 before assigning colour.
-j end_colouring
- 
-double_check_range_1:
-addi $t2, $a0, 8		# add 8 to the x position of car, getting the full width of the car
-ble $t7, $t2, colour_yellow 	# if $t7 <= 24, that means it is a car pixel.
-j check_next
+# River 2 -----
+# Set parameters for allocate_memory
+addi $a2, $zero, 4 		# set the x location of the first log 
+addi $a3, $zero, 20 		# set the x location of the second log
 
-check_next: 
-bge $t7, $a1, double_check_range_2 	# if $t7 <= 24, that means it is a car pixel.
-j end_colouring
+li $t7, 0x00008b 		# $t7 stores the blue colour used for the river 
+li $t8, 0x964b00		# $t8 stores the brown colour for logs 
 
-double_check_range_2:
-addi $t2, $a1, 8		# add 8 to the x position of car, getting the full width of the car
-ble $t7, $t2, colour_yellow 	# if $t7 <= 24, that means it is a car pixel.
-j end_colouring
+la $t9, river_2			# $t9 holds address of array river_2 
+
+jal allocate_memory		# Draw in the logs for river 2
+
+j skip_allocate_memory_func	# Skip over the allocate_memory implementation
+
+# FUNCTION: Store all the pixels in the .space array
+allocate_memory:
+	# $a0 and $a1 are the height and the width of the river/log, respectively 
+	addi $a0, $zero, 4			# set height = 4
+	addi $a1, $zero, 32			# set width = 32
+
+	# Set some values
+	lw $t0, displayAddress			# $t0 stores the base address for display
+	add $t6, $zero, $zero 			# Set index value ($t6) to zero. This will be index i for storing into the array.
+
+	# Draw a rectangle
+	add $t1, $zero, $zero			# Set index value ($t1) to zero. This will be a counter for the height.
+
+	draw_obstacle_rectangle_loop:
+	beq $t1, $a0, done_obstacle_draw 	# If $t1 == height ($a0), jump to end
+
+	# Draw line
+	add $t2, $zero, $zero			# Set index value ($t2) to zero. This will be a counter for width.
+
+	draw_obstacle_line_loop:
+	beq $t2, $a1, end_draw_obstacle_line 	# If $t2 == width ($a1), jump to end
+
+	sll $t3, $t6, 2 	   		# $t3 = $t6 * 4 = i * 4 = offset 
+	add $t4, $t9, $t3 	   		# $t4 = addr(A) + i * 4 = addr(A[i]) 
+
+	# Check if $t2 >= $a2
+	bge $t2, $a2, double_check_range_1	# if $t2 >= $a2, check if the value is within $a2 + 8 before assigning colour.
+	j colour_grey				# if $t2 <= $a2, it is a road pixel
+
+	# Check if $t2 <= $a2 + 8
+	double_check_range_1:
+	addi $t5, $a2, 8			# add 8 to the x position of car, getting the full width of the car1
+
+	ble $t2, $t5, colour_yellow 		# if $t2 <= $a2 + 8, that means it is a car1 pixel.
+	j check_next				# if $t2 >= $a2 + 8, check if it passes the x position of car2
+
+	# Check if $t2 >= $a3
+	check_next: 
+	bge $t2, $a3, double_check_range_2 	# if $t2 >= $a3, check if the value is within $a3 + 8 before assigning colour.
+	j colour_grey				# if $t2 <= $a3, it is a road pixel
+
+	double_check_range_2:
+	addi $t5, $a3, 8			# add 8 to the x position of car2, getting the full width of the car
+	ble $t2, $t5, colour_yellow 		# if $t2 <= $a3 + 8, that means it is a car pixel.
+	j colour_grey				# if $t2 >= $a3 + 8, it is a road pixel
 		
-colour_yellow:	
-sw $t6, 0($t3) 		   # colour it yellow (A[i] = 0xffff00)		   			  	   			   
+	colour_yellow:	
+	sw $t8, 0($t4) 		   		# assign yellow (A[i] = 0xffff00)		   			  	   			   
+	j done_colouring
 
-end_colouring:
-			   				   			  		   			   			   			   			   
-addi $t4, $t4, 1 	   # increment i 
-j space_array_loop
+	colour_grey:
+	sw $t7, 0($t4) 		   		# assign grey (A[i] = 0x808080)
 
-finish_road:
+	done_colouring:	
+   			  		   			   			   			   			   			   				   			  		   			   			   			   			   		   				   			  		   			   			   			   			   			   				   			  		   			   			   			   			   
+	addi $t2, $t2, 1 	   		# increment width by 1 
+	addi $t6, $t6, 1			# increment array counter by 1
+	j draw_obstacle_line_loop	   	
+	end_draw_obstacle_line:			# Finish drawing line
 
-# Paint the actual vehicle and road 
+	addi $t1, $t1, 1			# Increment $t1 （height）by 1
+	j draw_obstacle_rectangle_loop		#  Jump to start of rectangle drawing loop
 
-lw $t0, displayAddress	# set $t0 as the base address for the display
-li $t2, 0 		# reset $t2 to 0 to use as offset again
-li $t4, 0 		# reset $t4 to 0 
-li $t3, 0 		# reset $t3 to 0 
-li $t5, 0x808080 	# $t5 stores the grey colour used for the road
-li $t8, 0
-li $t6, 0
-li $t7, 0
-addi $t6, $t6, 640 	# since the road starts at (0, 20) and 20 * 32 = 640
-addi $t7, $t7, 768	# set $t7 to 768
-add $t0, $t0, $a2 	# set $t0 as the first painted pixel
-
-paint_loop:
-beq $t6, $t7, finish_paint_loop 	# Branch to Exit if $t6 /= 768
-sll $t2, $t4, 2 	   		# $t2 = $t4 * 4 = i * 4 = offset
-add $t3, $t9, $t2 	   		# $t3 = addr(A) + i * 4 = addr(A[i])
-lw $t8, 0($t3)				# load the value of $t3 into register $t8
-sw $t8, 0($t0)				# paint the first unit on the first row green. 
-addi $t4, $t4, 1 	  		# increment i 
-addi $t6, $t6, 1			# increment $t6 by 1
-addi $t0, $t0, 4			# increment $t0 by 4
-j paint_loop
-
-finish_paint_loop:
-
-jr $ra				# jump back to calling program
-
-done_first_row:
-
-
-# SECOND ROW OF ROAD
-
-# Allocate the colours into the .space variable
-
-lw $t0, displayAddress	# $t0 stores the base address for display
-li $t5, 0x808080 	# $t5 stores the grey colour used for the road
-li $t6, 0xffff00	# t6 stores the yellow colour for cars
-
-
-la $t9, vehicles_2	# $t9 holds address of array vehicles
-add $t4, $zero, $zero 	# $t4 holds i = 0
-add $t1, $zero, 128 	# $t1 holds 128
-li $a0, 4 		# set the location of the first vehicle ($a0 < $a1)
-li $a1, 20 		# set the location of the second vehicle
-li $a2, 3072		# set the location of the second road
-
-jal colour_obstacle_line
-
-
-
-#
-# Rivers and Logs -----------
-#
-
-# FIRST ROW OF RIVER
-
-# Allocate the colours into the .space variable
-
-lw $t0, displayAddress	# $t0 stores the base address for display
-li $t5, 0x00008b 	# $t5 stores the grey colour used for the river
-li $t6, 0x964b00	# t6 stores the brown colour for logs
-
-
-la $t9, river_1		# $t9 holds address of array river
-add $t4, $zero, $zero 	# $t4 holds i = 0
-add $t1, $zero, 128 	# $t1 holds 128
-li $a0, 0 		# set the location of the first log ($a0 < $a1)
-li $a1, 16 		# set the location of the second log
-li $a2, 1024 		# set the location of the first river row
-
-jal colour_obstacle_line
-
-# SECOND ROW OF RIVER
-
-# Allocate the colours into the .space variable
-
-lw $t0, displayAddress	# $t0 stores the base address for display
-li $t5, 0x00008b 	# $t5 stores the grey colour used for the river
-li $t6, 0x964b00	# t6 stores the brown colour for logs
-
-la $t9, river_2	# $t9 holds address of array vehicles
-add $t4, $zero, $zero 	# $t4 holds i = 0
-add $t1, $zero, 128 	# $t1 holds 128
-li $a0, 4 		# set the location of the first vehicle ($a0 < $a1)
-li $a1, 20 		# set the location of the second vehicle
-li $a2, 1536		# set the location of the second road
-
-jal colour_obstacle_line
-
-
-#
-# Set/draw the background 
-#
-
-lw $t0, displayAddress # $t0 stores the base address for display
-li $t5, 0	# resets $t5 to zero
-li $t4, 0
-li $t6, 0
-li $t7, 0
-li $t8, 0
-li $t1, 0xff0000 # $t1 stores the red colour code
-li $t2, 0x4dad53 # $t2 stores the green colour used for the land
-li $t3, 0x967bb8 # $t3 stores the lavender colour used for the frog
-sw $t1, 0($t0) # paint the first (top-left) unit red.
-sw $t2, 4($t0) # paint the second unit on the first row green. Why $t0+4?
-sw $t3, 128($t0) # paint the first unit on the second row blue. Why +128?
-
-
-# draw the destination green land
-
-# initialize the Loop variables $t4 and $t5 
-add $t4, $t4, $zero		# set $t4 to zero 
-addi $t5, $t5, 256		# set $t5 to 256 
-
-draw_destination:
-beq $t4, $t5, end_draw_destination	# Branch to Exit if $t4 == 512
-sw $t2, 0($t0)				# paint the first unit on the first row green. 
-addi $t0, $t0, 4			# move to the next pixel in the bitmap
-
-addi $t4, $t4, 1		# incrment $t4 by 1
-j draw_destination
-
-end_draw_destination:
-
-# draw the middle green land
-addi $t4, $t4, 256		# set $t4 to 512. Since $t4 was last 256, 512 = 256 + 256 
-addi $t5, $t5, 384		# set $t5 to 640. ($t5 was last 256, and 640 = 258 + 384)
-addi $t0, $t0, 1024		# set $t0 to the new beginning pixel
-
-draw_middle:
-beq $t4, $t5, end_draw_middle	# Branch to Exit if $t4 == 640
-sw $t2, 0($t0)			# paint the first unit on the first row green. 
-addi $t0, $t0, 4		# move to the next pixel in the bitmap
-
-addi $t4, $t4, 1		# incrment $t4 by 1
-j draw_middle
-
-end_draw_middle:
-
-
-# draw the starting green land 
-addi $t4, $t4, 256		# set $t4 to 896. Since $t4 was last 640, 896 = 640 + 256 
-addi $t5, $t5, 384		# set $t5 to 1024. ($t5 was last 640, and 1024 = 640 + 384)
-addi $t0, $t0, 1024		# set $t0 to the new beginning pixel
-
-draw_beginning:
-beq $t4, $t5, end_draw_beginning	# Branch to Exit if $t4 == 640
-sw $t2, 0($t0)				# paint the first unit on the first row green. 
-addi $t0, $t0, 4			# move to the next pixel in the bitmap
-
-addi $t4, $t4, 1			# incrment $t4 by 1
-j draw_beginning
-
-end_draw_beginning:
-
-
-#
-# Draw the frog
-#
-
-frog_movement:
-lw $t0, displayAddress 		# $t0 stores the base address for display
-la $t6, frog_x 			# $t6 has the same address as frog_x
-lw $t7, 0($t6)			# Fetch x position of frog
-la $t6, frog_y 			# $t6 has the same address as frog_x
-lw $t8, 0($t6)			# Fetch y position of frog
-sll $t7, $t7, 2			# Multiply $t7 by 4
-sll $t8, $t8, 7			# Multiply $t8 by 128
-add $t0, $t0, $t8		# Add y offset to $t0
-add $t0, $t0, $t7		# Add x offset to $t0
-
-jal draw_frog
-
-# Function: drawing the frog!
-draw_frog:
-sw $t3, 0($t0) 		# draw the front left leg at the specified frog_x and frog_y coordinates. 
-sw $t3, 12($t0) 	# draw the front right leg
-addi $t0, $t0, 132 	# Second Row of frog (upper half of body)
-sw $t3, 0($t0) 		# 
-sw $t3, 4($t0) 		#
-addi $t0, $t0, 128 	# Third Row of frog (lower half of body) 
-sw $t3, 0($t0) 		# 
-sw $t3, 4($t0) 		# 
-addi $t0, $t0, 124 	# Lower legs of frog 
-sw $t3, 0($t0) 		# 
-sw $t3, 12($t0) 	# 
+	done_obstacle_draw:			# When $t1 == height ($a0), the drawing is done.
 jr $ra
 
-# Exit: (?) don't know why it'ls not here
+skip_allocate_memory_func:
+
+
+#############################################################
+######### MAIN LOOP #########################################
+#############################################################
+
+repaint:
+
+###### DRAW SAFE SPACE LOCATIONS ###################################################
+
+# Destination safe space --
+
+lw $t0, displayAddress 			# $t0 stores the base address for display
+li $t3, 0x4dad53 			# $t3 stores the green colour code
+addi $t0, $t0, 0			# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 8			# set height = 6
+addi $a1, $zero, 32			# set width = 10
+
+jal draw_safe_space
+
+# Middle safe space --
+
+lw $t0, displayAddress 			# $t0 stores the base address for display
+li $t3, 0xc2b280 			# $t3 stores the green colour code
+addi $t0, $t0, 2048			# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 4			# set height = 6
+addi $a1, $zero, 32			# set width = 10
+jal draw_safe_space
+
+# Beginning safe space --
+
+lw $t0, displayAddress 			# $t0 stores the base address for display
+li $t3, 0x4dad53 			# $t3 stores the green colour code
+addi $t0, $t0, 3584			# start drawing at the start of the display. (basic pixel num)
+
+# $a0 and $a1 are the height and the width of the rectangle, respectively 
+addi $a0, $zero, 4			# set height = 6
+addi $a1, $zero, 32			# set width = 10
+jal draw_safe_space
+
+j skip_draw_safe_space_function 	# Skip the function so that it doesn't run again
+
+
+# FUNCTION: Draw rectangle for safe space
+draw_safe_space:
+	# Draw a rectangle:
+	add $t1, $zero, $zero		# Set index value ($t1) to zero
+	draw_rect_loop:
+	beq $t1, $a0, done_draw 	# If $t1 == height ($a0), jump to end
+
+	# Draw a line:
+	add $t2, $zero, $zero		# Set index value ($t2) to zero
+	draw_line_loop:
+	beq $t2, $a1, end_draw_line  	# If $t2 == width ($a1), jump to end
+	sw $t3, 0($t0)			# Draw a pixel at memory location $t0
+	addi $t0, $t0, 4		# Increment $t0 by 4
+	addi $t2, $t2, 1		# Increment $t2 by 1
+	j draw_line_loop		# Jump to start of line drawing loop
+	end_draw_line:
+
+
+	addi $t1, $t1, 1		# Increment $t1 by 1
+	j draw_rect_loop		# Jump to start of rectangle drawing loop
+
+	done_draw:			# When $t1 == height ($a0), the drawing is done.
+jr $ra
+
+skip_draw_safe_space_function:		# Skips the function
+
+###### DRAW GOALS ###################################################################
+
+# Goal 1 -----
+lw $s0, goal_1					# Load the value of goal_1 to $s0
+lw $t0, displayAddress 				# $t0 stores the base address for display
+beq $s0, 0, empty_colour1			# Check if goal is filled or not. If $s0 is 0, then go to empty_colour1
+lw $t3, goal_pink_filled 			# If $s0 is 1, $t3 stores the goal_pink_filled colour
+j skip_other1					# Skip the empty_colour1 implementation below that colours the square the empty pink
+empty_colour1:					# Colour the empty pink colour 
+lw $t3, goal_empty 				# $t3 stores the pink goal empty colour
+
+skip_other1:					# Skip to here to start drawing the colour 
+addi $t0, $t0, 8				# start drawing at the start of the display (where goal1 starts)
+
+# Draw the goal rectangle. $a0 and $a1 are the height and the width of the rectangle, respectively.  
+addi $a0, $zero, 2				
+addi $a1, $zero, 3				
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+
+# Goal 2 ------
+lw $s1, goal_2					# Load the value of goal_2 to $s1
+lw $t0, displayAddress 				# $t0 stores the base address for display
+beq $s1, 0, empty_colour2			# Check if goal is filled or not. If $s1 is 0, then go to empty_colour2
+lw $t3, goal_pink_filled			# If $s0 is 1, $t3 stores the pink goal_filled colour
+j skip_other2					# Skip the empty_colour2 implementation below that colours the square the empty pink
+empty_colour2:					# Colour the empty pink colour 
+lw $t3, goal_empty 				# $t3 stores the pink goal empty colour
+
+skip_other2:					# Skip to here to start drawing the colour
+addi $t0, $t0, 40				# start drawing at the beginning of the second goal
+
+# Draw the goal rectangle. $a0 and $a1 are the height and the width of the rectangle, respectively.  
+addi $a0, $zero, 2				
+addi $a1, $zero, 3				
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+
+# Goal 3 ------
+lw $s2, goal_3					# Load the value of goal_3 to $s2
+lw $t0, displayAddress 				# $t0 stores the base address for display
+beq $s2, 0, empty_colour3			# Check if goal is filled or not. If $s2 is 0, then go to empty_colour3
+lw $t3, goal_pink_filled			# If $s2 is 1, $t3 stores the pink goal_filled colour
+j skip_other3					# Skip implementation below 
+empty_colour3:					# Colour the empty pink colour 
+lw $t3, goal_empty 				# $t3 stores the pink goal empty colour
+
+skip_other3:					# Skip to here to start drawing the colour
+addi $t0, $t0, 72				# start drawing at the start of the third goal
+
+
+# Draw the goal rectangle. $a0 and $a1 are the height and the width of the rectangle, respectively.  
+addi $a0, $zero, 2				
+addi $a1, $zero, 3				
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+addi $t0, $t0, 104
+jal draw_safe_space
+
+
+###### DRAW RIVERS AND LOGS #########################################
+
+# River 1 (normal speed so no other code) 
+la $t9, river_1			# $t9 holds address of array river_1 
+li $a1, 1024			# $a1 determines where road1 should start(each row is 128) 
+jal paint_pixels
+jal shift_array_left
+
+
+# Road 1 -------
+la $t9, vehicles_1		# $t9 holds address of array vehicles_1 
+li $a1, 2560			# $a1 determines where road1 should start(each row is 128) 
+jal paint_pixels
+
+lw $t1, road1_speed 		# Load the value/word into $t1
+la $t2, road1_speed  		# Load the address
+lw $t3, road1_speed_set 	# This is the condition for the loop
+beq $t1, $t3, road1_speed_loop
+
+j skip_road1_loop
+road1_speed_loop:
+
+jal shift_array_left
+
+addi $t3, $zero, 0
+la $t2, road1_speed  		# Load the address
+sw $t3, 0($t2) 			# Reset it back to zero 
+
+j road1_loop_exit
+
+skip_road1_loop:
+lw $t1, road1_speed 		# Load the value/word into $t1
+addi $t1, $t1, 1		# Increment 
+sw $t1, 0($t2)			# Store this value to river2_s
+
+road1_loop_exit:
+
+
+# Road 2 ------
+la $t9, vehicles_2		# $t9 holds address of array vehicles_1 
+li $a1, 3072			# $a1 determines where road1 should start(each row is 128) 
+jal paint_pixels
+
+lw $t1, road2_speed 		# Load the value/word into $t1
+la $t2, road2_speed  		# Load the address
+lw $t3, road2_speed_set 	# This is the condition for the loop
+beq $t1, $t3, road2_speed_loop
+
+j skip_road2_loop
+road2_speed_loop:
+
+jal shift_array_right
+
+addi $t3, $zero, 0
+la $t2, road2_speed  		# Load the address
+sw $t3, 0($t2) 			# Reset it back to zero 
+
+j road2_loop_exit
+
+skip_road2_loop:
+lw $t1, road2_speed 		# Load the value/word into $t1
+addi $t1, $t1, 1		# Increment 
+sw $t1, 0($t2)			# Store this value to river2_s
+
+road2_loop_exit:
+
+# River 2 ------
+
+la $t9, river_2			# $t9 holds address of array vehicles_1 
+li $a1, 1536			# $a1 determines where road1 should start(each row is 128) 
+jal paint_pixels
+
+lw $t1, river2_speed 		# Load the value/word into $t1
+la $t2, river2_speed  		# Load the address
+lw $t3, river2_speed_set 	# This is the condition for the loop
+beq $t1, $t3, river2_speed_loop
+
+j skip_river2_loop
+river2_speed_loop:
+
+jal shift_array_right
+
+addi $t3, $zero, 0
+la $t2, river2_speed  		# Load the address
+sw $t3, 0($t2) 			# Reset it back to zero 
+
+j river2_loop_exit
+
+skip_river2_loop:
+lw $t1, river2_speed 		# Load the value/word into $t1
+addi $t1, $t1, 1		# Increment 
+sw $t1, 0($t2)			# Store this value to river2_s
+
+river2_loop_exit:
+
+
+j skip_memory_and_pixels_functions		# Skip the functions below
+
+# FUNCTION: paint all the pixels in the .space array 
+paint_pixels:
+	# Set some values 
+	lw $t0, displayAddress			# set $t0 as the base address for the display
+	add $t0, $t0, $a1 			# Set $t0 to the pixel indicated by $a1
+	li $t1, 0				# $t1 (represents index i) and $t2 determine how many 
+	li $t2, 128				# rows to paint (each row is 32). 
+
+	paint_loop:
+	beq $t1, $t2, finish_paint_loop 	# Branch to Exit if $t1 == $t2
+	sll $t3, $t1, 2 	   		# $t3 = $t4 * 4 = i * 4 = offset
+	add $t4, $t9, $t3 	   		# $t4 = addr(A) + i * 4 = addr(A[i])
+	lw $t5, 0($t4)				# load the value of $t4 into register $t5
+	sw $t5, 0($t0)				# paint the first unit on the first row green. 
+	addi $t1, $t1, 1 	  		# increment i 
+	addi $t0, $t0, 4			# increment $t0 by 4
+	j paint_loop
+
+	finish_paint_loop:
+jr $ra
+
+skip_memory_and_pixels_functions:		# Skips the function
+
+######## DRAW FROG ####################################################
+
+li $t4, 0x967bb8				# Lavender colour for frogs
+jal draw_frog					# Call the draw frog function
+
+j skip_function					# Skip over the draw frog implementation
+
+# FUNCTION: Draw frog
+draw_frog:
+
+# Set some values 
+lw $t0, displayAddress 				# $t0 stores the base address for display
+
+# Determine the position of the frog 
+la $t1, frog_x 					# $t1 has the same address as frog_x
+lw $t2, 0($t1)					# Fetch x position of frog
+la $t1, frog_y 					# $t2 has the same address as frog_y
+lw $t3, 0($t1)					# Fetch y position of frog
+sll $t2, $t2, 2					# Multiply $t2 (frog x position) by 4
+sll $t3, $t3, 7					# Multiply $t3 (frog y position) by 128
+add $t0, $t0, $t2				# Add x offset to $t0
+add $t0, $t0, $t3				# Add y offset to $t0
+
+# Orientation of frog 
+lw $s0, facing_left
+lw $s1, facing_forward
+lw $s2, facing_right
+lw $s3, facing_back
+
+# WHEN FROG MOVES FORWARD ---------
+beq $s1, 1, facing_forward_paint		# If facing_forward is true, paint a forward facing frog 
+
+j skip_facing_forward_paint			# If not, then skip the implementation
+
+facing_forward_paint:
+sw $t4, 0($t0) 					# First Row of frog
+sw $t4, 12($t0) 				
+addi $t0, $t0, 128 				# Second Row of frog 
+sw $t4, 0($t0) 		
+sw $t4, 4($t0) 		
+sw $t4, 8($t0) 		
+sw $t4, 12($t0) 	
+addi $t0, $t0, 132 				# Third Row of frog 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 		 
+addi $t0, $t0, 124 				# Fourth Row of frog 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 		
+sw $t4, 8($t0) 		
+sw $t4, 12($t0) 	
+
+skip_facing_forward_paint:
+
+# WHEN FROG MOVES LEFT -------
+beq $s0, 1, facing_left_paint		# If facing_left is true, paint a left facing frog 
+
+j skip_facing_left_paint		# If not, then skip the implementation
+
+facing_left_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 
+sw $t4, 4($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 4($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 12($t0) 
+
+skip_facing_left_paint:
+
+
+# WHEN FROG MOVES RIGHT -------
+beq $s2, 1, facing_right_paint		# If facing_right is true, paint a right facing frog 
+
+j skip_facing_right_paint		# If not, then skip the implementation
+
+facing_right_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 8($t0) 	
+sw $t4, 12($t0) 
+
+skip_facing_right_paint:
+
+
+# WHEN FROG MOVES BACK -------
+beq $s3, 1, facing_back_paint		# If facing_back is true, paint a back facing frog 
+
+j skip_facing_back_paint		# If not, then skip the implementation
+
+facing_back_paint:
+# Row 1 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+sw $t4, 12($t0) 
+
+# Row 2 
+addi $t0, $t0, 128 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+
+# Row 3
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 4($t0) 	
+sw $t4, 8($t0) 
+sw $t4, 12($t0) 
+
+# Row 4 
+addi $t0, $t0, 128 
+sw $t4, 0($t0) 		 
+sw $t4, 12($t0) 
+
+skip_facing_back_paint:
+
+jr $ra
+
+skip_function:
+
+
+###### FILLING IN GOALS #############################################################################################
+
+# What happens when a frog actually reaches one of the pink goals 
+
+# Set some values 
+lw $t0, displayAddress 			# $t0 stores the base address for display
+
+# Determine the position of the frog 
+la $t1, frog_x 				# $t1 has the same address as frog_x
+lw $t2, 0($t1)				# Fetch x position of frog
+la $t1, frog_y 				# $t2 has the same address as frog_y
+lw $t3, 0($t1)				# Fetch y position of frog
+sll $t2, $t2, 2				# Multiply $t2 (frog x position) by 4
+sll $t3, $t3, 7				# Multiply $t3 (frog y position) by 128
+add $t0, $t0, $t2			# Add x offset to $t0
+add $t0, $t0, $t3			# Add y offset to $t0
+
+#  GOAL 1 --------
+lw $t9, displayAddress 			# $t0 stores the base address for display
+addi $t6, $t9, 8			# Add 8 to $t9 and store in $t6. This is the left most edge of the box
+beq $t0, $t6, fill_goal1		# If the frrog is there, go to fill_goal1
+addi $t6, $t6, 4			# Add 4 to $t6 and store in $t6. This is one pixel to the right of the left edge of the box.
+beq $t0, $t6, fill_goal1		# If the frog is there, got to fill_goal1
+addi $t6, $t6, 4			# Add 4 to $t6 and store in $t6. This is two pixels to the right of the box.
+beq $t0, $t6, fill_goal1		# If the frog is there, got to fill_goal1
+
+j skip_fill_goal1			# Skip the below fill_goal1 implementation
+fill_goal1:				# We want to update values to reflect the frog filling the goal 
+
+# Change value of sound_ind to 1 (so that next time you hit destination region again, sound goes off)
+la $s3, sound_ind
+addi $s4, $zero, 1
+sw $s4, 0($s3)				
+
+# Generate sound tone  
+li $v0, 33
+li $a0, 69
+li $a1, 400
+li $a2, 112
+li $a3, 110
+syscall
+
+lw $s5, goal_1 				# Load the value of goal_1
+beq $s5, 1, no_change1			# If this goal is already filled, there are no changes to overall goals_filled 
+la $s0, goals_filled  			# Determine how address of the variable that stores how many goals are filled and store to $s0
+lw $s1, goals_filled 			# Determine how many goals are filled and store to $s1
+addi $s1, $s1, 1			# Add 1 to however many goals are filled, and replace the old $s1 with this new value 
+sw $s1, 0($s0)				# Store this new $s1 value with the new number of goals filled to the memory address of goal_filled($s0)
+beq $s1, 3, win_game1			# If this new value is equal to three, then we have WON the game.
+no_change1:
+j skip_win_game1			# Skip the below implementation of win_game1.
+
+win_game1:				# We have won the game! Set set variables so that in the repaint, we are painting the right goal colour 
+# Reset values - all of them back to zero. 
+addi $t7, $zero, 0
+la $t8, goal_1
+sw $t7, 0($t8)
+la $t8, goal_2
+sw $t7, 0($t8)
+la $t8, goal_3
+sw $t7, 0($t8)
+la $t8, goals_filled
+sw $t7, 0($t8)
+
+lw $t9, purple_win			# Set the colour for the background colour of the game_over screen. 
+j game_over 				# FOR DEBUGGING - there should be a proper win state
+skip_win_game1:				# We jump to here when we have NOT won the game yet. (number of goals filled is < 3)
+
+
+# Indicate that goal_1 has been filled 
+la $t4, goal_1				# Get the address of goal_1	
+addi $t5, $zero, 1			# Set $t5 to be zero
+sw $t5, 0($t4)				# Store the value of zero for goal_1
+	
+jal after_goal_filled
+skip_fill_goal1:
+
+
+# GOAL 2 -------
+lw $t9, displayAddress 			# $t0 stores the base address for display
+addi $t6, $t9, 40			# Add 40 to $t9 and store in $t6. This is the left most edge of the box.
+beq $t0, $t6, fill_goal2		# If the frog is there, got to fill_goal2
+addi $t6, $t6, 4			# Add 4 to $t6 and store in $t6. This is one pixel to the right of the left edge of the box.
+beq $t0, $t6, fill_goal2		# If the frog is there, got to fill_goal2	
+addi $t6, $t6, 4			# Add 4 to $t6 and store in $t6. This is two pixels to the right of the box.
+beq $t0, $t6, fill_goal2		# If the frog is there, got to fill_goal2
+
+j skip_fill_goal2			# Skip the below fill_goal2 implementation
+fill_goal2:				# We want to update values to reflect the frog filling the second
+
+# Change value of sound_ind to 1 (so that next time you hit destination region again, sound goes off)
+la $s3, sound_ind
+addi $s4, $zero, 1
+sw $s4, 0($s3)	
+
+# Generate sound tone  
+li $v0, 33
+li $a0, 69
+li $a1, 400
+li $a2, 112
+li $a3, 110
+syscall
+
+lw $s5, goal_2 				# Load the value of goal_2
+beq $s5, 1, no_change2			# If this goal is already filled, there are no changes to overall goals_filled 
+la $s0, goals_filled  			# Determine the address for goals_filled.
+lw $s1, goals_filled 			# Determine how many goals are filled.
+addi $s1, $s1, 1			# Add one to the number of goals filled and store this new value in $s1
+sw $s1, 0($s0)				# Store the new number of goals filled to the goals_filled variable
+beq $s1, 3, win_game2			# If all of the goals are filled, then we have WON the game. Go to win_game2
+no_change2:
+j skip_win_game2			# Skip the below implmenetation of win_game2
+
+win_game2:				# We have won the game! Set set variables so that in the repaint, we are painting the right goal colour 
+# Reset values - all of them back to zero. 
+addi $t7, $zero, 0
+la $t8, goal_1
+sw $t7, 0($t8)
+la $t8, goal_2
+sw $t7, 0($t8)
+la $t8, goal_3
+sw $t7, 0($t8)
+la $t8, goals_filled
+sw $t7, 0($t8)
+
+lw $t9, purple_win			# Set the colour for the background colour of the game_over screen. 
+j game_over  				# FOR DEBUGGING - there should be a proper win state
+skip_win_game2:				# We jump to here when we have NOT won the game yet. (number of goals filled is < 3)
+
+# Indicate that goal_2 has been filled 
+la $t4, goal_2				# Get the address of goal_2
+addi $t5, $zero, 1			# Set $t5 to be zero
+sw $t5, 0($t4)				# Store the value of zero for goal_2
+
+jal after_goal_filled
+skip_fill_goal2:
+
+
+
+# Goal 3
+lw $t9, displayAddress 			# $t0 stores the base address for display
+addi $t6, $t9, 72			# Add 72 to $t9 and store in $t6. This is the left most edge of the box.
+beq $t0, $t6, fill_goal3		# If the frog is there, got to fill_goal3
+addi $t6, $t6, 4			# Add 4 to $t6 and store in $t6. This is one pixel to the right of the left edge of the box.
+beq $t0, $t6, fill_goal3		# If the frog is there, got to fill_goal3
+addi $t6, $t6, 4			# Add 4 to $t6 and store in $t6. This is two pixels to the right of the box.
+beq $t0, $t6, fill_goal3		# If the frog is there, got to fill_goal3
+
+j skip_fill_goal3			# Skip the below fill_goal3 implementation
+fill_goal3:				# We want to update values to reflect the frog filling the third goal
+
+# Change value of sound_ind to 1 (so that next time you hit destination region again, sound goes off)
+la $s3, sound_ind
+addi $s4, $zero, 1
+sw $s4, 0($s3)	
+
+# Generate sound tone  
+li $v0, 33
+li $a0, 69
+li $a1, 400
+li $a2, 112
+li $a3, 110
+syscall
+
+lw $s5, goal_3 				# Load the value of goal_3
+beq $s5, 1, no_change3			# If this goal is already filled, there are no changes to overall goals_filled 
+la $s0, goals_filled  			# Determine the address for goals_filled.
+lw $s1, goals_filled 			# Determine how many goals are filled.
+addi $s1, $s1, 1			# Add one to the number of goals filled and store this new value in $s1
+sw $s1, 0($s0)				# Store the new number of goals filled to the goals_filled variable
+beq $s1, 3, win_game3			# If all of the goals are filled, then we have WON the game. Go to win_game3
+no_change3:
+j skip_win_game3			# Skip the below implmenetation of win_game3
+
+win_game3:				# We have won the game! Set set variables so that in the repaint, we are painting the right goal colour 
+# Reset values - all of them back to zero. 
+
+addi $t7, $zero, 0
+la $t8, goal_1
+sw $t7, 0($t8)
+la $t8, goal_2
+sw $t7, 0($t8)
+la $t8, goal_3
+sw $t7, 0($t8)
+la $t8, goals_filled
+sw $t7, 0($t8)
+
+lw $t9, purple_win			# Set the colour for the background colour of the game_over screen. 
+j game_over  				# FOR DEBUGGING - there should be a proper win state
+skip_win_game3:				# We jump to here when we have NOT won the game yet. (number of goals filled is < 3)
+
+# Indicate that goal_3 has been filled 
+la $t4, goal_3				# Get the address of goal_3
+addi $t5, $zero, 1			# Set $t5 to be zero
+sw $t5, 0($t4)				# Store the value of zero for goal_2
+
+jal after_goal_filled
+skip_fill_goal3:
+
+
+j skip_after_goal			# Skip the below function implementation
+
+# FUNCTION: Implements the pause that happens before a new frog comes in after a goal is filled.
+after_goal_filled:
+li $v0, 32				# Sleep so that it pauses for a bt
+li $a0, 500
+syscall
+
+la $t2, frog_x
+la $t3, frog_y
+
+# Reset frog's position to start 
+addi $t9, $zero, 16 			# Reset x position
+sw $t9, 0($t2)				# Store this reset position to frog_x
+addi $t9, $zero, 28 			# Reset y position
+sw $t9, 0($t3)				# Store this reset position to frog_y
+
+addi $t8, $zero, 0
+addi $t7, $zero, 1
+la $t9, facing_forward			# Get the (1/0) value of facing_forward
+sw $t7, 0($t9) 				# Set it to 0.
+la $t9, facing_left			# Get the (1/0) value of facing_left
+sw $t8, 0($t9) 				# Set it to 1.
+la $t9, facing_right			# Get the (1/0) value of facing_right
+sw $t8, 0($t9) 				# Set it to 0.
+la $t9, facing_back			# Get the (1/0) value of facing_back
+sw $t8, 0($t9) 				# Set it to 0.
+
+jr $ra
+
+skip_after_goal:			# Skips the function implmenetation
+
+
+### LIVES REMAINING ###############################################################################################
+
+lw $t1, red
+lw $t2, black
+
+# Set the display to start at 26 pixels from the left 
+lw $t0, displayAddress 			# $t0 stores the base address for display
+addi $t0, $t0, 232
+lw $t9, lives_left
+
+# If you have three lives remaining, load three req squares 
+beq $t9, 3, three_lives
+j not_three_lives
+three_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+not_three_lives:
+
+# If you have two lives remaining, load two red squares, and one black square
+beq $t9, 2, two_lives
+j not_two_lives
+two_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+not_two_lives:
+
+# If you have one lives remaining, load 1 red squares, and two black square
+beq $t9, 1, one_lives
+j not_one_lives
+one_lives:
+sw $t1, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+not_one_lives:
+
+# If you have zero lives remaining, load three black squares and jump to the terminate game function 
+beq $t9, 0, no_lives
+j not_no_lives
+no_lives:
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+sw $t2, 0($t0) 
+addi $t0, $t0, 8
+
+lw $t9, black
+j game_over					# When no lives left, jump to game_over
+not_no_lives:
+
+###### SHIFTING LOGS AND CARS ARRAYS  #############################################################################
+
+j skip_shift				# Skip the code that shifts the array
+
+# SHIFT LEFT ------
+shift_array_left:
+ 
+addi $s0, $t9, 0			# Find the address of the first pixel of one row
+lw $s1, 0($s0)				# load the value of $s0 into register $s1
+
+add $t1, $zero, $zero 			# Set index value ($t1) to zero. This will be index i for storing into the array.
+
+# $a0 and $a1 are the height and the width of the river/road, respectively 
+addi $a0, $zero, 4			# set height = 4
+addi $a1, $zero, 32			# set width = 32
+
+# Draw a rectangle:
+add $t4, $zero, $zero			# Set index value ($t4) to zero
+draw_rect_loop_shift:
+beq $t4, $a0, exit_shift  		# If $t4 == height ($a0), jump to end
+
+# Draw a line:
+add $t5, $zero, $zero			# Set index value ($t5) to zero
+draw_line_loop_shift:
+beq $t5, $a1, end_draw_line_shift  	# If $t5 == width ($a1), jump to end
+
+sll $t2, $t1, 2 	   		# $t2 = $t1 * 4 = i * 4 = offset 
+add $t3, $t9, $t2 	   		# $t3 = addr(A) + i * 4 = addr(A[i]) 
+
+# Store the value of the next pixel
+addi $t6, $t1, 1			# Store the value of index $t1, incremented by one, to another register ($t6)
+sll $t6, $t6, 2				# Offset
+add $t7, $t9, $t6			# Add this to $t9 store to register $t7
+lw $t8, 0($t7)				# Load word from $t7 to $t8
+sw $t8, 0($t3)				# Store this word into $t3
+
+
+addi $t5, $t5, 1 			# Increment index ($t5)
+addi $t1, $t1, 1			# increment array counter by 1
+
+j draw_line_loop_shift			# Jump to start of line drawing loop
+end_draw_line_shift:
+
+# Store the value of the first pixel to the last pixel
+sw $s1, 0($t3)
+
+addi $t4, $t4, 1			# Increment $t6 by 1
+j draw_rect_loop_shift			# Jump to start of rectangle drawing loop
+ 
+exit_shift:
+
+jr $ra
+
+# SHIFT RIGHT ------
+shift_array_right:
+ 
+addi $s0, $t9, 508			# Find the address of the last pixel of one row
+lw $s1, 0($s0)				# load the value of the last address of $t9 into register $s1
+
+add $t1, $zero, $zero 			# Set index value ($t1) to zero. This will be index i for storing into the array.
+
+# $a0 and $a1 are the height and the width of the river/road, respectively 
+addi $a0, $zero, 4			# set height = 4
+addi $a1, $zero, 32			# set width = 32
+
+# Draw a rectangle:
+add $t4, $zero, $zero			# Set index value ($t4) to zero
+draw_rect_loop_shift_r:
+beq $t4, $a0, exit_shift_r  		# If $t4 == height ($a0), jump to end
+
+# Draw a line:
+add $t5, $zero, $zero			# Set index value ($t5) to zero
+draw_line_loop_shift_r:
+beq $t5, $a1, end_draw_line_shift_r  	# If $t5 == width ($a1), jump to end
+
+sll $t2, $t1, 2 	   		# $t2 = $t1 * 4 = i * 4 = offset 
+sub $t3, $s0, $t2 	   		# $t3 = addr(A) - i * 4 = addr(A[i]) 
+
+# Store the value of the next pixel
+addi $t6, $t1, 1			# -> Store the value of index $t1, incremented by one, to another register ($t6)
+sll $t6, $t6, 2				# Offset
+sub $t7, $s0, $t6			# -> Sub $t6 from $t9 and store this address value to $t7
+lw $t8, 0($t7)				# -> Load word from $t7 to $t8
+sw $t8, 0($t3)				# -> Store this word into $t3
+
+
+addi $t5, $t5, 1 			# Increment index ($t5)
+addi $t1, $t1, 1			# increment array counter by 1
+
+j draw_line_loop_shift_r		# Jump to start of line drawing loop
+end_draw_line_shift_r:
+
+# Store the value of the last pixel to the first pixel
+sw $s1, 0($t3)
+
+addi $t4, $t4, 1			# Increment $t6 by 1
+j draw_rect_loop_shift_r		# Jump to start of rectangle drawing loop
+ 
+exit_shift_r:
+
+jr $ra
+
+skip_shift:				# Skips the code that shifts the array
+
+### KEYSTROKE RESPONSE (FROG MOVEMENT, PAUSE, QUIT) ##########################################
+lw $t0, 0xffff0000				# Memory address of keyboard
+beq $t0, 1, keyboard_input			# If there is a keystroke event, go to keyboard_input
+j skip_keyboard_input				# If not, skip the keyboard_input function
+keyboard_input:
+lw $t1, 0xffff0004				# Load the value of the keystroke event
+beq $t1, 0x61, respond_to_A			# If the keystroke was A, then go to respond_to_A
+j skip_A					# If not, skip the implementation and check if it is W 
+	respond_to_A: 				# Move frog left
+	
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
+	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t7, 0($t9) 				# Set it to 1.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 0.
+	
+	# Draw in new frog 
+	la $t2, frog_x 				# $t1 has the same address as frog_x
+	lw $t3, 0($t2)				# Fetch x position of frog
+	addi $t5, $zero, 4 			# Assign the value of 4 
+	sub $t6, $t3, $t5			# Original x position minus 16 (moves one frog left)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
+
+skip_A:
+beq $t1, 0x77, respond_to_W			# If the keystroke was W, then go to respond_to_W
+j skip_W					# If not, skip the implementation and check if it is S 
+	respond_to_W: 				# Move frog forward
+	
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
+	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t7, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 1.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 0.
+	
+	# Draw in new frog 
+	la $t2, frog_y 				# $t2 has the same address as frog_y
+	lw $t3, 0($t2)				# Fetch y position of frog
+	addi $t5, $zero, 4 			# Assign the value of 4 
+	sub $t6, $t3, $t5			# Original y position minus 4 (moves one frog forward)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
+
+
+
+skip_W:
+beq $t1, 0x73, respond_to_S			# If the keystroke was S, then go to respond_to_S
+j skip_S					# If not, skip the implementation and check if it is D
+	respond_to_S: 				# Move frog back
+	
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
+	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_right 			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t7, 0($t9) 				# Set it to 1.
+	
+	# Draw in new frog 
+	la $t2, frog_y 				# $t2 has the same address as frog_y
+	lw $t3, 0($t2)				# Fetch y position of frog
+	addi $t5, $zero, 4 			# Assign the value of 32 
+	add $t6, $t3, $t5			# Original y position minus 32 (moves one frog forward)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
+
+skip_S:
+beq $t1, 0x64, respond_to_D			# If the keystroke was D, then go to respond_to_D
+j skip_D					# If not, skip the implementation 
+	respond_to_D: 				# Move frog right
+
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
+	
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t7, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 1.
+	
+	# Draw in new frog 
+	la $t2, frog_x 				# $t2 has the same address as frog_x
+	lw $t3, 0($t2)				# Fetch y position of frog
+	addi $t5, $zero, 4 			# Assign the value of 32 
+	add $t6, $t3, $t5			# Original y position minus 32 (moves one frog forward)
+	sw $t6, 0($t2)
+	li $t4, 0x967bb8			# Lavender colour for frogs
+	jal draw_frog
+skip_D:
+beq $t1, 0x70, respond_to_P			# If the keystroke was P, then go to respond_to_P
+j skip_P					# If not, skip the implementation 
+	respond_to_P: 				# Pause screen
+	la $t9, keyboard				# Load the memory address of the keyboard
+	addi $t7, $zero, 0				# Assign $t7 the value of 0
+	sw $t7, 0($t9) 					# Assign the value of the memory address to zero to get ready for 
+	
+	# Pause the game 
+	pause_loop:
+	lw $t1, 0xffff0000
+	beq $t1, 1, check_p			# If there is a keystroke event (p is pressed again), break the loop and resume
+	j skip_check_p
+	check_p:
+	lw $t2, 0xffff0004
+	beq $t2, 0x70, break_pause
+	skip_check_p:
+	
+	# Draw a pause button 
+	lw $t0, displayAddress
+	lw $t1, pause_colour
+	addi $t0, $t0, 1920			# 15 rows from top (128 each row)
+	addi $t0, $t0, 64			# 16 pixels from the right (4 each shift)
+	
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	addi $a0, $zero, 1		# Height of stroke
+	addi $a1, $zero, 2		# width of stroke
+	jal letter_horizontal_line
+	addi $t0, $t0, 120
+	addi $a0, $zero, 1		# Height of stroke
+	addi $a1, $zero, 3		# width of stroke
+	jal letter_horizontal_line
+	addi $t0, $t0, 116
+	addi $a0, $zero, 1		# Height of stroke
+	addi $a1, $zero, 2		# width of stroke
+	jal letter_horizontal_line
+	addi $t0, $t0, 120
+	sw $t1, 0($t0)
+	j pause_loop
+	
+	break_pause:	
+		
+skip_P:
+beq $t1, 0x71, respond_to_Q			# If the keystroke was D, then go to respond_to_D
+j skip_Q					# If not, skip the implementation 
+	respond_to_Q: 				# Game over screen
+	j game_over
+	
+skip_Q:
+
+skip_keyboard_input:
+
+la $t9, keyboard				# Load the memory address of the keyboard
+add $t8, $t9, $zero 				# Assign $t8 the keyboard address
+addi $t7, $zero, 0				# Assign $t7 the value of 0
+sw $t7, 0($t9) 					# Assign the value of the memory address to zero to get ready for next keystroke event
+
+#### FROG DEATH (collides with cars/river)#######################################################
+# If the position of the frog is on a pixel that has a value of the yellow or blue, frog restarts 
+
+addi $t1, $zero, 0 		# Assign $t1 to be zero. We will add to it to make it the frog's position
+
+# Get the frog's position
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+la $t2, frog_y 			# $t2 has the same address as frog_y
+lw $t4, 0($t2)			# Fetch y position of frog
+sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
+sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
+add $t1, $t1, $t3		# Add x offset to $t1
+addi $t1, $t1, 4		# To ensure sensitivity is not at the edges, but rather when frog is ON something
+addi $s2, $zero, 8		# Gets the width of the frog (3*8 because you are looking at hte 4th pixel) for right moving
+
+lw $t7, blue
+lw $t8, yellow
+
+# Road 2
+addi $s1, $zero, 3072		# Y position of the road
+beq $t4, $s1, assess_road2	# If the frog's y position is at the line of vehicle_2, go to assess_road2. 
+
+j skip_assess_road2		# If not, skip over assess_road2
+assess_road2:
+la $t0, vehicles_2 		# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+
+beq $t8, $t6, crash_car2	# If the frog's position is on a car (yellow), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t8, $t6, crash_car2	# If the frog's position is on a car (yellow), frog returns to the start 
+
+j skip_crash_car2		# If the pixel colors are not the same, then skip crash_car
+
+crash_car2:
+li $t4, 0x8b0000		# Colour for draw_frog when frog dies
+jal draw_frog
+jal crash_func
+skip_crash_car2:
+skip_assess_road2:		# Skips assess_raod (when y position of frog is not the same as the road2
+
+
+
+# Road 1 
+addi $s1, $zero, 2560		# Y position of the road
+beq $t4, $s1, assess_road1	# If the frog's y position is at the line of vehicle_1, go to assess_road1. 
+
+j skip_assess_road1		# If not, skip over assess_road2
+assess_road1:
+la $t0, vehicles_1 		# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+
+beq $t8, $t6, crash_car1	# If the frog's position is on a car (yellow), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t8, $t6, crash_car1	# If the frog's position is on a car (yellow), frog returns to the start 
+
+j skip_crash_car1		# If the pixel colors are not the same, then skip crash_car
+
+crash_car1:
+li $t4, 0x8b0000				# Colour for draw_frog when frog dies
+jal draw_frog
+jal crash_func
+skip_crash_car1:
+skip_assess_road1:		# Skips assess_raod (when y position of frog is not the same as the road2
+
+# River 2 
+addi $s1, $zero, 1536		# Y position of the road
+beq $t4, $s1, assess_river2	# If the frog's y position is at the line of vehicle_1, go to assess_road1. 
+
+j skip_assess_river2		# If not, skip over assess_road2
+assess_river2:
+la $t0, river_2			# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+
+beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), frog returns to the start 
+
+# Since on a a river, need to move with log 
+move_with_log:			# If the pixel colors are not the same, then move with the log.
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+beq $t3, 28, hit_edge2		# Do not move if you are already at the end of display
+
+lw $t6, river2_speed 		# Load the value/word into $t1
+la $t7, river2_speed  		# Load the address
+lw $t8, river2_speed_set 	# This is the condition for the loop
+
+beq $t6, $t8, move_slow_loop
+
+j skip_move_slow_loop
+
+move_slow_loop:
+addi $t3, $t3, 1		# Move the frog to the right 
+sw $t3, 0($t2)			# Store the new frog x position to frog_x
+li $t4, 0x967bb8		# Lavender colour for frogs
+jal draw_frog			# Call the draw frog function
+
+skip_move_slow_loop:
+hit_edge2:			# Skip over all the movement stuff because you are at the edge of display
+# move with log done
+
+j skip_crash_river2		# Skip implementation of crash_river2
+crash_river2:
+li $t4, 0x8b0000		# Colour for draw_frog when frog dies
+jal draw_frog
+jal crash_func
+skip_crash_river2: 		# Skips implementation of crash function (frog was on log)
+
+skip_assess_river2:		# Skip implementation of assess_river2 (frog was not on the same y position as this river)
+
+# River 1 
+addi $s1, $zero, 1024		# Y position of the road
+beq $t4, $s1, assess_river1	# If the frog's y position is at the line of vehicle_1, go to assess_road1. 
+
+j skip_assess_river1		# If not, skip over assess_road2
+assess_river1:
+la $t0, river_1			# $t0 stores the base address for vehicles2
+add $t5, $t0, $zero 		# Store the memory address to $t5
+add $t5, $t5, $t1		# Add frog's x position offset to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+
+beq $t7, $t6, crash_river1	# If the frog's position is on a river (blue), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t7, $t6, crash_river1	# If the frog's position is on a car (yellow), frog returns to the start 
+
+# Since on a river, need to move with log (other direction!)
+move_with_log2:			# If the pixel colors are not the same, then move with the log.
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+beq $t3, 0, hit_edge		# Do not move if you are already at the end of display
+addi $t7, $zero, 1
+sub $t3, $t3, $t7		# Move the frog to the left 
+sw $t3, 0($t2)			# Store the new frog x position to frog_x
+li $t4, 0x967bb8		# Lavender colour for frogs
+jal draw_frog			# Call the draw frog function
+hit_edge:
+# Move log done
+
+j skip_crash_river1		# Skip implementation of crash function
+
+crash_river1:
+li $t4, 0x8b0000		# Colour for draw_frog when frog dies
+jal draw_frog
+jal crash_func
+skip_crash_river1:
+
+skip_assess_river1:		# Skips assess_river2 (when y position of frog is not the same as the road2)
+
+j skip_crash_func		# Skip the crash_func implementation
+
+# FUNCTION: reset frog's position after dying AND delete a life
+crash_func:
+	la $t2, frog_x 			# $t2 has the same address as frog_x
+	lw $t3, 0($t2)			# Fetch x position of frog
+	la $t5, frog_y 			# $t2 has the same address as frog_y
+	lw $t4, 0($t5)			# Fetch y position of frog
+	sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
+	sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
+	add $t1, $t1, $t3		# Add x offset to $t1
+
+
+	# Reset frog's position to start 
+	addi $t9, $zero, 16 		# Reset x position
+	sw $t9, 0($t2)			# Store this reset position to frog_x
+	addi $t9, $zero, 28 		# Reset y position
+	sw $t9, 0($t5)			# Store this reset position to frog_y
+
+	# Set parameters to make sure it resets facing forward
+	addi $t8, $zero, 0
+	addi $t7, $zero, 1
+	la $t9, facing_forward			# Get the (1/0) value of facing_forward
+	sw $t7, 0($t9) 				# Set it to 0.
+	la $t9, facing_left			# Get the (1/0) value of facing_left
+	sw $t8, 0($t9) 				# Set it to 1.
+	la $t9, facing_right			# Get the (1/0) value of facing_right
+	sw $t8, 0($t9) 				# Set it to 0.
+	la $t9, facing_back			# Get the (1/0) value of facing_back
+	sw $t8, 0($t9) 				# Set it to 0.
+
+	# Delete a life 
+	la $t1, lives_left		# Load the address of lives_left
+	lw $t2, 0($t1) 			# Load the value of lives_left (0, 1, 2, 3)
+	addi $t3, $zero, 1		# Assgin $t3 the value of 1 
+	sub $t3, $t2, $t3 		# Use another register to minus one from the above value 
+	sw $t3, 0($t1) 			# Store this new value to lives_left 
+
+	# Generate sound tone  
+	li $v0, 33
+	li $a0, 39
+	li $a1, 400
+	li $a2, 65
+	li $a3, 110
+	syscall
+
+jr $ra
+skip_crash_func: 		# Skips the crash_func implementation
+
+
+#### GAME OVER SCREEN ######
+
+j skip_game_over				# Skip over implementation of game_over
+
+
+game_over:					# Display game over screen - $t9 is a parameter for bckgrnd colour!
+
+# Reset frog position 
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+la $t5, frog_y 			# $t2 has the same address as frog_y
+lw $t4, 0($t5)			# Fetch y position of frog
+#sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
+#sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
+#add $t1, $t1, $t3		# Add x offset to $t1
+
+addi $t8, $zero, 16 		# Reset x position
+sw $t8, 0($t2)			# Store this reset position to frog_x
+addi $t8, $zero, 28 		# Reset y position
+sw $t8, 0($t5)			# Store this reset position to frog_y
+
+
+# Reset goal settings 
+add $t8, $zero, $zero
+la $t7, goal_1
+sw $t8, 0($t7)
+la $t7, goal_2
+sw $t8, 0($t7)
+la $t7, goal_3
+sw $t8, 0($t7)
+la $t7, goals_filled
+sw $t8, 0($t7)
+
+# Reset goal sound indicator
+addi $t8, $zero, 1
+la $t7, sound_ind
+sw $t8, 0($t7)
+
+# Set some values 
+lw $t0, displayAddress
+addi $a0, $zero, 32				# set height = 6
+addi $a1, $zero, 32				# set width = 10
+#lw $t9, black 					# Get the colour black SET AS PARAMETER
+
+
+# Paint screen background black 
+draw_black_screen:
+	# Draw a rectangle:
+	add $t1, $zero, $zero		# Set index value ($t1) to zero
+	draw_black_rect_loop:
+	beq $t1, $a0, done_draw_black 	# If $t1 == height ($a0), jump to end
+
+	# Draw a line:
+	add $t2, $zero, $zero		# Set index value ($t2) to zero
+	draw_black_line_loop:
+	beq $t2, $a1, end_draw_black_line  	# If $t2 == width ($a1), jump to end
+	sw $t9, 0($t0)			#   Draw a pixel at memory location $t0
+	addi $t0, $t0, 4		#   Increment $t0 by 4
+	addi $t2, $t2, 1	#   Increment $t2 by 1
+	j draw_black_line_loop	#   Jump to start of line drawing loop
+	end_draw_black_line:
+
+	addi $t1, $t1, 1	#   - Increment $t1 by 1
+	j draw_black_rect_loop	#   - Jump to start of rectangle drawing loop
+
+done_draw_black:		# When $t1 == height ($a0), the drawing is done.
+
+# ---------
+lw $t0, displayAddress
+lw $t1, white			# Get the white colour and store to $t1
+
+# Write the word game
+lw $t2, game_x			# Get the x position of the word game
+lw $t3, game_y			# Get the y position fo the word game 
+sll $t2, $t2, 2			# Time game_x by 4
+sll $t3, $t3, 7			# Time game_y by 128
+add $t0, $t0, $t2		# Add the x position
+add $t0, $t0, $t3		# Add the y position
+
+# Row 1 
+# G -
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between G and A 
+addi $t0, $t0, 12		# End of letter_horizontal_line already goes forward 4 pixels
+
+# A - 
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 16
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 36
+
+# Row 2 
+# G -
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 28
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 12
+
+# M - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+
+# Space between M and E 
+addi $t0, $t0, 4
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 3
+# G -
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 24
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 2		# width of stroke
+jal letter_horizontal_line
+
+# Space between M and E 
+addi $t0, $t0, 4
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 4
+# G -
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 3		# width of stroke
+jal letter_horizontal_line
+
+# Space between G and A 
+addi $t0, $t0, 4
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 36
+
+# Row 5
+# G -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 8
+
+# A - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between A and M 
+addi $t0, $t0, 4
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 6
+# G -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between G and A 
+addi $t0, $t0, 8
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 56
+
+# Row 7
+# G -
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between G and A 
+addi $t0, $t0, 4		# End of letter_horizontal_line already goes forward 4 pixels
+
+# A - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between A and M 
+addi $t0, $t0, 8
+
+# M - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between M and E 
+addi $t0, $t0, 8
+
+# E -  
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Take to the end of the of display
+addi $t0, $t0, 36
+
+
+
+# Write the word over
+lw $t0, displayAddress
+lw $t2, over_x			# Get the x position of the word game
+lw $t3, over_y			# Get the y position fo the word game 
+sll $t2, $t2, 2			# Time game_x by 4
+sll $t3, $t3, 7			# Time game_y by 128 
+add $t0, $t0, $t2		# Add the x position
+add $t0, $t0, $t3		# Add the y position
+
+
+# Row 1 
+# O -
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 3		# width of stroke
+jal letter_horizontal_line
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between E and R 
+addi $t0, $t0, 4
+
+# R - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 36
+
+# Row 2
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 40
+
+# Row 3
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 40
+
+# Row 4
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between E and R 
+addi $t0, $t0, 4
+
+# R - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Set up for the next row 
+addi $t0, $t0, 36
+
+# Row 5
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 8		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 8
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 48
+
+
+# Row 6
+# O -
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Space between O and V
+addi $t0, $t0, 12		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+addi $t0, $t0, 8
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 12
+
+# E - 
+sw $t1, 0($t0)
+
+# Space between E and R 
+addi $t0, $t0, 24
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 12
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 44
+
+# Row 7
+# O -
+addi $t0, $t0, 4
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 3		# width of stroke
+jal letter_horizontal_line
+
+# Space between O and V
+addi $t0, $t0, 16		# End of letter_horizontal_line already goes forward 4 pixels
+
+# V - 
+sw $t1, 0($t0)
+
+# Space between V and E 
+addi $t0, $t0, 16
+
+# E - 
+addi $a0, $zero, 1		# Height of stroke
+addi $a1, $zero, 5		# width of stroke
+jal letter_horizontal_line
+
+# Space between E and R 
+addi $t0, $t0, 4
+
+# R - 
+sw $t1, 0($t0)
+addi $t0, $t0, 16
+sw $t1, 0($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 40
+
+# Write Y/N
+lw $t0, displayAddress
+li $t1, 0xADD8E6		# Make the Y/N another colour 
+lw $t2, yes_x			# Get the x position of the word game
+lw $t3, yes_y			# Get the y position fo the word game 
+sll $t2, $t2, 2			# Time game_x by 4
+sll $t3, $t3, 7			# Time game_y by 128 
+add $t0, $t0, $t2		# Add the x position
+add $t0, $t0, $t3		# Add the y position
+
+# Row 1 
+# Y - 
+sw $t1, 0($t0)
+sw $t1, 8($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 8($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+# Row 2 
+# Y - 
+sw $t1, 0($t0)
+sw $t1, 8($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 4($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 4($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+# Row 3 
+# Y - 
+sw $t1, 4($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 4($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 8($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+# Row 4 
+# Y - 
+sw $t1, 4($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 0($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+
+j ask_restart				# After writing 'Game over' end the game 
+
+j skip_horizontal_line_func
+letter_horizontal_line:
+add $s1, $zero, $zero 		# Set index value ($s1) to zero
+draw_stroke_rect_loop:
+beq $s1, $a0, done_stroke 	# If $t1 == height ($a0), jump to end
+# Draw a line:
+add $s2, $zero, $zero		# Set index value ($s2) to zero
+draw_stroke_line_loop:
+beq $s2, $a1, end_stroke_line  	# If $t2 == width ($a1), jump to end
+sw $t1, 0($t0)			#   Draw a pixel at memory location $t0
+addi $t0, $t0, 4		#   Increment $t0 by 4
+addi $s2, $s2, 1		#   Increment $t2 by 1
+j draw_stroke_line_loop	#   Jump to start of line drawing loop
+end_stroke_line:
+
+addi $s1, $s1, 1	#   - Increment $t1 by 1
+j draw_stroke_rect_loop	#   - Jum
+done_stroke:
+jr $ra 
+skip_horizontal_line_func: 
+
+skip_game_over:		# Skip over implementation of game_over
+
+j skip_ask_restart				# Skip implementation of ask_restart
+ask_restart:
+# Key stroke event to start game again
+lw $t0, 0xffff0000				# Memory address of keyboard
+beq $t0, 1, keyboard_input_r			# If there is a keystroke event, go to keyboard_input_r
+
+j skip_keyboard_input_r				# If not, skip the keyboard_input_r function
+keyboard_input_r:
+lw $t1, 0xffff0004				# Load the value of the keystroke event
+beq $t1, 0x79, respond_to_Y			# If the keystroke was Y, then go to respond_to_Y
+j skip_Y					# If not, skip the implementation and check if it is N
+	respond_to_Y: 				# Restart game 
+	la $t9, lives_left
+	addi $t8, $zero, 3
+	sw $t8, 0($t9)				# Restart so give back all three lives 
+	
+	# Reset all goal values
+	addi $t7, $zero, 0
+	la $t8, goal_1
+	sw $t7, 0($t8)
+	la $t8, goal_2
+	sw $t7, 0($t8)
+	la $t8, goal_3
+	sw $t7, 0($t8)
+	la $t8, goals_filled
+	sw $t7, 0($t8)
+	
+	j play 					
+
+skip_Y:
+beq $t1, 0x6E, respond_to_N			# If the keystroke was N, then go to respond_to_N
+j skip_N					# If not, skip the implementation 
+	respond_to_N: 				# Don't restart game 
+	jal done_screen
+	j Exit
+skip_N:
+skip_keyboard_input_r:
+j ask_restart
+la $t9, keyboard				# Load the memory address of the keyboard
+add $t8, $t9, $zero 				# Assign $t8 the keyboard address
+addi $t7, $zero, 0				# Assign $t7 the value of 0
+sw $t7, 0($t9) 	
+
+skip_ask_restart:
+
+j skip_done_screen
+done_screen:
+	lw $t0, displayAddress
+	addi $a0, $zero, 32	# set height = 6
+	addi $a1, $zero, 32	# set width = 10
+	lw $t9, black 		# Get the colour black
+
+	# Draw a rectangle:
+	add $t1, $zero, $zero		# Set index value ($t1) to zero
+	draw_exit_rect_loop:
+	beq $t1, $a0, done_draw_exit 	# If $t1 == height ($a0), jump to end
+
+	# Draw a line:
+	add $t2, $zero, $zero		# Set index value ($t2) to zero
+	draw_exit_line_loop:
+	beq $t2, $a1, end_draw_exit_line  	# If $t2 == width ($a1), jump to end
+	sw $t9, 0($t0)			#   Draw a pixel at memory location $t0
+	addi $t0, $t0, 4		#   Increment $t0 by 4
+	addi $t2, $t2, 1	#   Increment $t2 by 1
+	j draw_exit_line_loop	#   Jump to start of line drawing loop
+	end_draw_exit_line:
+
+	addi $t1, $t1, 1	#   - Increment $t1 by 1
+	j draw_exit_rect_loop	#   - Jump to start of rectangle drawing loop
+	done_draw_exit:
+jr $ra 
+skip_done_screen:
+
+
+### Sleep ###
+li $v0, 32
+li $a0, 50
+syscall
+
+
+j repaint		# Loop up to the very top again for repainting
+					
+##### EXIT ######
+						
+Exit:
+# ---
 li $v0, 10 # terminate the program gracefully
 syscall
