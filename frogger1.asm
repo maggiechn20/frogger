@@ -28,6 +28,10 @@
 #
 # Any additional information that the TA needs to know:
 #
+# Sometimes when the frog reaches the end, it seems that it won't fit into any of the goals - I made it this way s that you have 
+# to go back to the logs on the river to move until the frog is in the right position and fits in. 
+#
+# The win state is the game over screen with a purple background 
 #####################################################################
 
 
@@ -676,6 +680,14 @@ la $s3, sound_ind
 addi $s4, $zero, 1
 sw $s4, 0($s3)				
 
+# Generate sound tone  
+li $v0, 33
+li $a0, 69
+li $a1, 400
+li $a2, 112
+li $a3, 110
+syscall
+
 lw $s5, goal_1 				# Load the value of goal_1
 beq $s5, 1, no_change1			# If this goal is already filled, there are no changes to overall goals_filled 
 la $s0, goals_filled  			# Determine how address of the variable that stores how many goals are filled and store to $s0
@@ -729,6 +741,14 @@ la $s3, sound_ind
 addi $s4, $zero, 1
 sw $s4, 0($s3)	
 
+# Generate sound tone  
+li $v0, 33
+li $a0, 69
+li $a1, 400
+li $a2, 112
+li $a3, 110
+syscall
+
 lw $s5, goal_2 				# Load the value of goal_2
 beq $s5, 1, no_change2			# If this goal is already filled, there are no changes to overall goals_filled 
 la $s0, goals_filled  			# Determine the address for goals_filled.
@@ -781,6 +801,14 @@ fill_goal3:				# We want to update values to reflect the frog filling the third 
 la $s3, sound_ind
 addi $s4, $zero, 1
 sw $s4, 0($s3)	
+
+# Generate sound tone  
+li $v0, 33
+li $a0, 69
+li $a1, 400
+li $a2, 112
+li $a3, 110
+syscall
 
 lw $s5, goal_3 				# Load the value of goal_3
 beq $s5, 1, no_change3			# If this goal is already filled, there are no changes to overall goals_filled 
@@ -1026,6 +1054,14 @@ beq $t1, 0x61, respond_to_A			# If the keystroke was A, then go to respond_to_A
 j skip_A					# If not, skip the implementation and check if it is W 
 	respond_to_A: 				# Move frog left
 	
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
+	
 	addi $t8, $zero, 0
 	addi $t7, $zero, 1
 	la $t9, facing_forward			# Get the (1/0) value of facing_forward
@@ -1050,6 +1086,14 @@ skip_A:
 beq $t1, 0x77, respond_to_W			# If the keystroke was W, then go to respond_to_W
 j skip_W					# If not, skip the implementation and check if it is S 
 	respond_to_W: 				# Move frog forward
+	
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
 	
 	addi $t8, $zero, 0
 	addi $t7, $zero, 1
@@ -1078,6 +1122,14 @@ beq $t1, 0x73, respond_to_S			# If the keystroke was S, then go to respond_to_S
 j skip_S					# If not, skip the implementation and check if it is D
 	respond_to_S: 				# Move frog back
 	
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
+	
 	addi $t8, $zero, 0
 	addi $t7, $zero, 1
 	la $t9, facing_forward			# Get the (1/0) value of facing_forward
@@ -1103,6 +1155,14 @@ beq $t1, 0x64, respond_to_D			# If the keystroke was D, then go to respond_to_D
 j skip_D					# If not, skip the implementation 
 	respond_to_D: 				# Move frog right
 
+	# Movement sound
+	li $v0, 33
+	li $a0, 75
+	li $a1, 50
+	li $a2, 16
+	li $a3, 70
+	syscall
+	
 	addi $t8, $zero, 0
 	addi $t7, $zero, 1
 	la $t9, facing_forward			# Get the (1/0) value of facing_forward
@@ -1392,36 +1452,6 @@ crash_func:
 jr $ra
 skip_crash_func: 		# Skips the crash_func implementation
 
-
-### FROG REACHES DESTINATION GRASS ##########################################################################################################################
-
-# Check the frog position
-la $t2, frog_y 					# $t2 has the same address as frog_y
-lw $t4, 0($t2)					# Fetch y position of frog
-sll $t4, $t4, 7					# Multiply $t4 (frog y position) by 128
-addi $s1, $zero, 512				# Y position of the end goal (MAYBE CHANGE TO INCLUDE BOTH Y POSITIONS?
-ble $t4, $s1, goal_reached			# If the frog's y position is smaller than the y position of the end goal rectangle, go change sound_ind
-
-j goal_not_reached				# If the frog hasn't reached the destination grass, skip goal_reached:
-
-goal_reached:
-lw $s2, sound_ind 				# Load the value at sound_ind
-beq $s2, 1, make_sound				# If counter is 1, make sound and then change value to 0. If not, skip 
-j skip_make_sound
-
-make_sound:					# Make the sound 
-li $v0, 33
-li $a0, 75
-li $a1, 300
-li $a2, 16
-li $a3, 110
-syscall
-
-la $s3, sound_ind
-addi $s4, $zero, 0
-sw $s4, 0($s3)					# Change value of sound_ind to 0. 
-skip_make_sound:
-goal_not_reached:
 
 #### GAME OVER SCREEN ######
 
