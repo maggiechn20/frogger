@@ -66,6 +66,8 @@ game_x: 	.word 4
 game_y:		.word 4
 over_x:		.word 4 
 over_y: 	.word 13
+yes_x:		.word 10
+yes_y:		.word 21
 
 facing_left:	.word 0
 facing_forward: .word 1
@@ -1632,7 +1634,102 @@ sw $t1, 0($t0)
 
 # Set up for the next row 
 addi $t0, $t0, 40
-# 
+
+# Write Y/N
+lw $t0, displayAddress
+li $t1, 0xADD8E6		# Make the Y/N another colour 
+lw $t2, yes_x			# Get the x position of the word game
+lw $t3, yes_y			# Get the y position fo the word game 
+sll $t2, $t2, 2			# Time game_x by 4
+sll $t3, $t3, 7			# Time game_y by 128 
+add $t0, $t0, $t2		# Add the x position
+add $t0, $t0, $t3		# Add the y position
+
+# Row 1 
+# Y - 
+sw $t1, 0($t0)
+sw $t1, 8($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 8($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+# Row 2 
+# Y - 
+sw $t1, 0($t0)
+sw $t1, 8($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 4($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 4($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+# Row 3 
+# Y - 
+sw $t1, 4($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 4($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 8($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+# Row 4 
+# Y - 
+sw $t1, 4($t0)
+
+# Space between Y and /
+addi $t0, $t0, 16
+
+# / -
+sw $t1, 0($t0)
+
+# Space between / and N
+addi $t0, $t0, 16
+
+# N -
+sw $t1, 0($t0)
+sw $t1, 12($t0)
+
+# Set up for the next row 
+addi $t0, $t0, 96
+
+
 j ask_restart				# After writing 'Game over' end the game 
 
 j skip_horizontal_line_func
@@ -1673,15 +1770,13 @@ j skip_Y					# If not, skip the implementation and check if it is N
 	la $t9, lives_left
 	addi $t8, $zero, 3
 	sw $t8, 0($t9)				# Restart so give back all three lives 
-	j play 					# FOR DEBUGGING PURPOSES SHOULD BE play
+	j play 					
 
 skip_Y:
 beq $t1, 0x6E, respond_to_N			# If the keystroke was N, then go to respond_to_N
 j skip_N					# If not, skip the implementation 
 	respond_to_N: 				# Don't restart game 
-	lw $t2, displayAddress			# FOR DEBUG PURPOSES
-	lw $t3, red				# FOR DEBUG PURPOSES
-	sw $t3, 0($t2)				# FOR DEBUG PURPOSES
+	jal done_screen
 	j Exit
 skip_N:
 skip_keyboard_input_r:
@@ -1693,6 +1788,33 @@ sw $t7, 0($t9)
 
 skip_ask_restart:
 
+j skip_done_screen
+done_screen:
+	lw $t0, displayAddress
+	addi $a0, $zero, 32	# set height = 6
+	addi $a1, $zero, 32	# set width = 10
+	lw $t9, black 		# Get the colour black
+
+	# Draw a rectangle:
+	add $t1, $zero, $zero		# Set index value ($t1) to zero
+	draw_exit_rect_loop:
+	beq $t1, $a0, done_draw_exit 	# If $t1 == height ($a0), jump to end
+
+	# Draw a line:
+	add $t2, $zero, $zero		# Set index value ($t2) to zero
+	draw_exit_line_loop:
+	beq $t2, $a1, end_draw_exit_line  	# If $t2 == width ($a1), jump to end
+	sw $t9, 0($t0)			#   Draw a pixel at memory location $t0
+	addi $t0, $t0, 4		#   Increment $t0 by 4
+	addi $t2, $t2, 1	#   Increment $t2 by 1
+	j draw_exit_line_loop	#   Jump to start of line drawing loop
+	end_draw_exit_line:
+
+	addi $t1, $t1, 1	#   - Increment $t1 by 1
+	j draw_exit_rect_loop	#   - Jump to start of rectangle drawing loop
+	done_draw_exit:
+jr $ra 
+skip_done_screen:
 ### Sleep ###
 li $v0, 32
 li $a0, 50
