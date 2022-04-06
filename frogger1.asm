@@ -12,25 +12,22 @@
 # - Display height in pixels: 256
 # - Base Address for Display: 0x10008000 ($gp)
 #
-# Which milestone is reached in this submission? 1 (and like a bit of 2)
+# Which milestone is reached in this submission? 5
 # (See the assignment handout for descriptions of the milestones)
 # - Milestone 1/2/3/4/5 (choose the one the applies)
 #
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
-# 2. (fill in the feature, if any)
-# 3. (fill in the feature, if any)
-# ... (add more if necessary)
+# 1. Display the number of lives remaining
+# 2. After final player death, display game over/retry screen. Restart the game if the 'y' is pressed, terminate game if 'n' is pressed
+# 3. Objects in different rows move at different speeds
+# 4. Respawn animation each time frog is lost (it is coloured red)
+# 5. Make the frog point in the direction that it is travelling 
+# 6. Added sound effects for collisions and reach the destination "grass"
+# 7. Pause and display a play button on the screen when 'p' is pressed. 
 #
 # Any additional information that the TA needs to know:
 #
-# The movement of the logs and vehicles are still incomplete, but the two logs 
-# that I have right now can move, but it jut can't wrap around to the beginning 
-# again  - it is something i'm working on right now!
-#
-# Also, I did my frog shape based on the project tutorial video - if that needs to be
-# changed for next time i can change it!
 #####################################################################
 
 
@@ -65,7 +62,7 @@ pause_colour:	.word 0xD3D3D3
 purple_win: 	.word 0x6a0dad
 
 goal_empty:     .word 0xf8C8DC
-goal_filled: 	.word 0xcd5e77
+goal_pink_filled: 	.word 0xcd5e77
 
 sound_ind:	.word 1
 
@@ -304,7 +301,7 @@ skip_draw_safe_space_function:		# Skips the function
 lw $s0, goal_1					# Load the value of goal_1 to $s0
 lw $t0, displayAddress 				# $t0 stores the base address for display
 beq $s0, 0, empty_colour1			# Check if goal is filled or not. If $s0 is 0, then go to empty_colour1
-lw $t3, goal_filled 				# If $s0 is 1, $t3 stores the pink goal_filled (not goals_filled which is something entirely diff!) colour
+lw $t3, goal_pink_filled 			# If $s0 is 1, $t3 stores the goal_pink_filled colour
 j skip_other1					# Skip the empty_colour1 implementation below that colours the square the empty pink
 empty_colour1:					# Colour the empty pink colour 
 lw $t3, goal_empty 				# $t3 stores the pink goal empty colour
@@ -327,7 +324,7 @@ jal draw_safe_space
 lw $s1, goal_2					# Load the value of goal_2 to $s1
 lw $t0, displayAddress 				# $t0 stores the base address for display
 beq $s1, 0, empty_colour2			# Check if goal is filled or not. If $s1 is 0, then go to empty_colour2
-lw $t3, goal_filled 				# If $s0 is 1, $t3 stores the pink goal_filled colour
+lw $t3, goal_pink_filled			# If $s0 is 1, $t3 stores the pink goal_filled colour
 j skip_other2					# Skip the empty_colour2 implementation below that colours the square the empty pink
 empty_colour2:					# Colour the empty pink colour 
 lw $t3, goal_empty 				# $t3 stores the pink goal empty colour
@@ -350,7 +347,7 @@ jal draw_safe_space
 lw $s2, goal_3					# Load the value of goal_3 to $s2
 lw $t0, displayAddress 				# $t0 stores the base address for display
 beq $s2, 0, empty_colour3			# Check if goal is filled or not. If $s2 is 0, then go to empty_colour3
-lw $t3, goal_filled 				# If $s2 is 1, $t3 stores the pink goal_filled colour
+lw $t3, goal_pink_filled			# If $s2 is 1, $t3 stores the pink goal_filled colour
 j skip_other3					# Skip implementation below 
 empty_colour3:					# Colour the empty pink colour 
 lw $t3, goal_empty 				# $t3 stores the pink goal empty colour
@@ -679,12 +676,14 @@ la $s3, sound_ind
 addi $s4, $zero, 1
 sw $s4, 0($s3)				
 
+lw $s5, goal_1 				# Load the value of goal_1
+beq $s5, 1, no_change1			# If this goal is already filled, there are no changes to overall goals_filled 
 la $s0, goals_filled  			# Determine how address of the variable that stores how many goals are filled and store to $s0
 lw $s1, goals_filled 			# Determine how many goals are filled and store to $s1
 addi $s1, $s1, 1			# Add 1 to however many goals are filled, and replace the old $s1 with this new value 
 sw $s1, 0($s0)				# Store this new $s1 value with the new number of goals filled to the memory address of goal_filled($s0)
 beq $s1, 3, win_game1			# If this new value is equal to three, then we have WON the game.
-
+no_change1:
 j skip_win_game1			# Skip the below implementation of win_game1.
 
 win_game1:				# We have won the game! Set set variables so that in the repaint, we are painting the right goal colour 
@@ -730,12 +729,14 @@ la $s3, sound_ind
 addi $s4, $zero, 1
 sw $s4, 0($s3)	
 
+lw $s5, goal_2 				# Load the value of goal_2
+beq $s5, 1, no_change2			# If this goal is already filled, there are no changes to overall goals_filled 
 la $s0, goals_filled  			# Determine the address for goals_filled.
 lw $s1, goals_filled 			# Determine how many goals are filled.
 addi $s1, $s1, 1			# Add one to the number of goals filled and store this new value in $s1
 sw $s1, 0($s0)				# Store the new number of goals filled to the goals_filled variable
 beq $s1, 3, win_game2			# If all of the goals are filled, then we have WON the game. Go to win_game2
-
+no_change2:
 j skip_win_game2			# Skip the below implmenetation of win_game2
 
 win_game2:				# We have won the game! Set set variables so that in the repaint, we are painting the right goal colour 
@@ -781,12 +782,14 @@ la $s3, sound_ind
 addi $s4, $zero, 1
 sw $s4, 0($s3)	
 
+lw $s5, goal_3 				# Load the value of goal_3
+beq $s5, 1, no_change3			# If this goal is already filled, there are no changes to overall goals_filled 
 la $s0, goals_filled  			# Determine the address for goals_filled.
 lw $s1, goals_filled 			# Determine how many goals are filled.
 addi $s1, $s1, 1			# Add one to the number of goals filled and store this new value in $s1
 sw $s1, 0($s0)				# Store the new number of goals filled to the goals_filled variable
 beq $s1, 3, win_game3			# If all of the goals are filled, then we have WON the game. Go to win_game3
-
+no_change3:
 j skip_win_game3			# Skip the below implmenetation of win_game3
 
 win_game3:				# We have won the game! Set set variables so that in the repaint, we are painting the right goal colour 
@@ -1420,12 +1423,12 @@ sw $s4, 0($s3)					# Change value of sound_ind to 0.
 skip_make_sound:
 goal_not_reached:
 
-#### GAME OVER SCREEN ################################################################################################################
+#### GAME OVER SCREEN ######
 
-j skip_game_over		# Skip over implementation of game_over
-# Display game over screen
+j skip_game_over				# Skip over implementation of game_over
 
-game_over:
+
+game_over:					# Display game over screen
 
 # Reset goal settings 
 add $t8, $zero, $zero
@@ -1435,22 +1438,22 @@ la $t7, goal_2
 sw $t8, 0($t7)
 la $t7, goal_3
 sw $t8, 0($t7)
-la $t7, goal_filled
+la $t7, goals_filled
 sw $t8, 0($t7)
 
-# Reset goal sond indicator
+# Reset goal sound indicator
 addi $t8, $zero, 1
-la $t7, goal_filled
+la $t7, sound_ind
 sw $t8, 0($t7)
 
 # Set some values 
 lw $t0, displayAddress
-addi $a0, $zero, 32	# set height = 6
-addi $a1, $zero, 32	# set width = 10
-#lw $t9, black 		# Get the colour black SET AS PARAMETER
+addi $a0, $zero, 32				# set height = 6
+addi $a1, $zero, 32				# set width = 10
+#lw $t9, black 					# Get the colour black SET AS PARAMETER
 
 
-# Paint screen black 
+# Paint screen background black 
 draw_black_screen:
 	# Draw a rectangle:
 	add $t1, $zero, $zero		# Set index value ($t1) to zero
