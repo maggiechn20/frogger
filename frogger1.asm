@@ -892,7 +892,8 @@ lw $t4, 0($t2)			# Fetch y position of frog
 sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
 sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
 add $t1, $t1, $t3		# Add x offset to $t1
-#add $t1, $t1, $t4		# Add y offset to $t1
+addi $t1, $t1, 4		# To ensure sensitivity is not at the edges, but rather when frog is ON something
+addi $s2, $zero, 8		# Gets the width of the frog (3*8 because you are looking at hte 4th pixel)
 
 lw $t7, blue
 lw $t8, yellow
@@ -908,14 +909,21 @@ add $t5, $t0, $zero 		# Store the memory address to $t5
 add $t5, $t5, $t1		# Add frog's x position offset to $t5 
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
 
-beq $t8, $t6, crash_car2		# If the frog's position is on a car (yellow), it returns to the start 
+beq $t8, $t6, crash_car2	# If the frog's position is on a car (yellow), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t8, $t6, crash_car2	# If the frog's position is on a car (yellow), frog returns to the start 
+
 j skip_crash_car2		# If the pixel colors are not the same, then skip crash_car
+
 crash_car2:
 li $t4, 0x8b0000				# Colour for draw_frog when frog dies
 jal draw_frog
 jal crash_func
 skip_crash_car2:
 skip_assess_road2:		# Skips assess_raod (when y position of frog is not the same as the road2
+
 
 
 # Road 1 
@@ -929,8 +937,14 @@ add $t5, $t0, $zero 		# Store the memory address to $t5
 add $t5, $t5, $t1		# Add frog's x position offset to $t5 
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
 
-beq $t8, $t6, crash_car1		# If the frog's position is on a car (yellow), it returns to the start 
+beq $t8, $t6, crash_car1	# If the frog's position is on a car (yellow), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t8, $t6, crash_car1	# If the frog's position is on a car (yellow), frog returns to the start 
+
 j skip_crash_car1		# If the pixel colors are not the same, then skip crash_car
+
 crash_car1:
 li $t4, 0x8b0000				# Colour for draw_frog when frog dies
 jal draw_frog
@@ -950,6 +964,10 @@ add $t5, $t5, $t1		# Add frog's x position offset to $t5
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
 
 beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t7, $t6, crash_river2	# If the frog's position is on a car (yellow), frog returns to the start 
 
 
 # FUNCTION: move_with_log
@@ -996,6 +1014,12 @@ add $t5, $t5, $t1		# Add frog's x position offset to $t5
 lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
 
 beq $t7, $t6, crash_river1	# If the frog's position is on a river (blue), it returns to the start 
+
+add $t5, $t5, $s2		# Add frog's width to $t5 
+lw $t6, 0($t5)			# Load the colour from memory address indicated by $t5 into $t6 
+beq $t7, $t6, crash_river1	# If the frog's position is on a car (yellow), frog returns to the start 
+
+
 move_with_log2:			# If the pixel colors are not the same, then move with the log.
 la $t2, frog_x 			# $t2 has the same address as frog_x
 lw $t3, 0($t2)			# Fetch x position of frog
