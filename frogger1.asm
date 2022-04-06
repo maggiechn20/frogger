@@ -1428,7 +1428,22 @@ goal_not_reached:
 j skip_game_over				# Skip over implementation of game_over
 
 
-game_over:					# Display game over screen
+game_over:					# Display game over screen - $t9 is a parameter for bckgrnd colour!
+
+# Reset frog position 
+la $t2, frog_x 			# $t2 has the same address as frog_x
+lw $t3, 0($t2)			# Fetch x position of frog
+la $t5, frog_y 			# $t2 has the same address as frog_y
+lw $t4, 0($t5)			# Fetch y position of frog
+#sll $t3, $t3, 2			# Multiply $t3 (frog x position) by 4
+#sll $t4, $t4, 7			# Multiply $t4 (frog y position) by 128
+#add $t1, $t1, $t3		# Add x offset to $t1
+
+addi $t8, $zero, 16 		# Reset x position
+sw $t8, 0($t2)			# Store this reset position to frog_x
+addi $t8, $zero, 28 		# Reset y position
+sw $t8, 0($t5)			# Store this reset position to frog_y
+
 
 # Reset goal settings 
 add $t8, $zero, $zero
